@@ -8,7 +8,12 @@ import {
   BudgetInput,
 } from "./types";
 
-const redis = Redis.fromEnv();
+// Trim env vars buat handle whitespace/newline yang gak sengaja ke-copy
+const redis = new Redis({
+  url: (process.env.UPSTASH_REDIS_REST_URL || "").trim(),
+  token: (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim(),
+});
+
 const TX_KEY = "my-money:transactions";
 const REC_KEY = "my-money:recurring";
 const BUDGET_KEY = "my-money:budgets";
@@ -163,7 +168,6 @@ export async function saveBudgets(items: Budget[]) {
 
 export async function addBudget(input: BudgetInput) {
   const items = await getBudgets();
-  // Kalau kategori ini udah punya budget, replace aja
   const filtered = items.filter((b) => b.category !== input.category);
   const newItem: Budget = {
     ...input,
