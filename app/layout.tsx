@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import InstallPrompt from "@/components/InstallPrompt";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -40,6 +41,7 @@ export default function RootLayout({
       >
         {children}
         <InstallPrompt />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
