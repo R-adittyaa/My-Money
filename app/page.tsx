@@ -1,9 +1,27 @@
-import { getTransactions, addTransaction, deleteTransaction } from "@/lib/storage";
+import {
+  getTransactions,
+  addTransaction,
+  deleteTransaction,
+  getRecurring,
+  addRecurring,
+  deleteRecurring,
+  toggleRecurring,
+  processRecurring,
+  getBudgets,
+  addBudget,
+  deleteBudget,
+} from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 import CategoryChart from "@/components/CategoryChart";
 import FilterBar from "@/components/FilterBar";
-import AmountInput from "@/components/AmountInput";
-import CategoryInput from "@/components/CategoryInput";
+import TransactionForm from "@/components/TransactionForm";
+import DeleteButton from "@/components/DeleteButton";
+import ExportButton from "@/components/ExportButton";
+import RecurringManager from "@/components/RecurringManager";
+import ProcessRecurringButton from "@/components/ProcessRecurringButton";
+import BudgetManager from "@/components/BudgetManager";
+import BudgetProgress from "@/components/BudgetProgress";
+import { transactionsToCSV, generateFilename } from "@/lib/csv";
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
@@ -46,7 +64,12 @@ export default async function Home({
   }>;
 }) {
   const params = await searchParams;
+
+  await processRecurring();
+
   const all = await getTransactions();
+  const templates = await getRecurring();
+  const budgets = await getBudgets();
 
   const availableMonths = Array.from(
     new Set(all.map((t) => t.date.slice(0, 7)))
@@ -119,6 +142,23 @@ export default async function Home({
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
+  // Hitung status budget
+  const budgetStatuses = budgets.map((b) => {
+    const spent = monthTransactions
+      .filter((t) => t.type === "expense" && t.category === b.category)
+      .reduce((sum, t) => sum + t.amount, 0);
+    const percentage = b.limit > 0 ? Math.round((spent / b.limit) * 100) : 0;
+    const status: "safe" | "warning" | "over" =
+      percentage >= 100 ? "over" : percentage >= 80 ? "warning" : "safe";
+    return {
+      category: b.category,
+      limit: b.limit,
+      spent,
+      percentage,
+      status,
+    };
+  });
+
   const grouped = transactions.reduce<Record<string, typeof transactions>>(
     (acc, t) => {
       (acc[t.date] ||= []).push(t);
@@ -144,11 +184,14 @@ export default async function Home({
     params.cat ||
     (params.sort && params.sort !== "newest");
 
+  // ============ SERVER ACTIONS ============
+
   async function handleAdd(formData: FormData) {
     "use server";
     const amount = Number(formData.get("amount"));
-    if (!amount || amount <= 0) return;
-
+    if (!amount || amount <= 0) {
+      throw new Error("Amount must be greater than 0");
+    }
     await addTransaction({
       date: formData.get("date") as string,
       amount,
@@ -165,11 +208,81 @@ export default async function Home({
     revalidatePath("/");
   }
 
+  async function handleExport(month?: string): Promise<{
+    csv: string;
+    filename: string;
+  }> {
+    "use server";
+    const all = await getTransactions();
+    const data = month ? all.filter((t) => t.date.startsWith(month)) : all;
+    const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date));
+    return {
+      csv: transactionsToCSV(sorted),
+      filename: generateFilename(month),
+    };
+  }
+
+  async function handleAddRecurring(formData: FormData) {
+    "use server";
+    const amount = Number(formData.get("amount"));
+    const dayOfMonth = Number(formData.get("dayOfMonth"));
+    if (!amount || amount <= 0) throw new Error("Invalid amount");
+    if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) {
+      throw new Error("Invalid day");
+    }
+    await addRecurring({
+      category: (formData.get("category") as string).trim(),
+      amount,
+      type: formData.get("type") as "income" | "expense",
+      notes: ((formData.get("notes") as string) || "").trim(),
+      dayOfMonth,
+      frequency: "monthly",
+      active: true,
+    });
+    revalidatePath("/");
+  }
+
+  async function handleDeleteRecurring(formData: FormData) {
+    "use server";
+    await deleteRecurring(formData.get("id") as string);
+    revalidatePath("/");
+  }
+
+  async function handleToggleRecurring(formData: FormData) {
+    "use server";
+    const id = formData.get("id") as string;
+    const active = formData.get("active") === "1";
+    await toggleRecurring(id, active);
+    revalidatePath("/");
+  }
+
+  async function handleProcessRecurring(): Promise<number> {
+    "use server";
+    const count = await processRecurring();
+    revalidatePath("/");
+    return count;
+  }
+
+  async function handleAddBudget(formData: FormData) {
+    "use server";
+    const limit = Number(formData.get("limit"));
+    const category = (formData.get("category") as string).trim();
+    if (!limit || limit <= 0) throw new Error("Invalid limit");
+    if (!category) throw new Error("Invalid category");
+    await addBudget({ category, limit });
+    revalidatePath("/");
+  }
+
+  async function handleDeleteBudget(formData: FormData) {
+    "use server";
+    await deleteBudget(formData.get("id") as string);
+    revalidatePath("/");
+  }
+
   return (
     <div className="min-h-screen">
-      {/* HEADER */}
       <header className="sticky top-0 z-20 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md">
-        <div className="px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+        <div className="px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-xs shadow-sm">
               Rp
@@ -178,82 +291,45 @@ export default async function Home({
               My<span className="text-red-600 dark:text-red-500">Money</span>
             </h1>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {all.length} transaksi tercatat
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
+              {all.length} transaksi tercatat
+            </p>
+            <ExportButton
+              onExport={handleExport}
+              availableMonths={availableMonths}
+              currentMonth={activeMonth}
+            />
+          </div>
         </div>
       </header>
 
       <div className="px-4 sm:px-6 lg:px-8 py-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* LEFT SIDEBAR */}
         <aside className="lg:col-span-3 lg:sticky lg:top-20 lg:self-start space-y-4">
-          <form
-            action={handleAdd}
-            className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm space-y-3"
-          >
-            <div className="flex items-center gap-2">
-              <span className="w-1 h-4 bg-red-600 rounded-full"></span>
-              <h2 className="font-semibold text-sm">Tambah Transaksi</h2>
-            </div>
+          <TransactionForm action={handleAdd} suggestions={allCategories} />
 
-            <input
-              name="date"
-              type="date"
-              required
-              defaultValue={new Date().toISOString().slice(0, 10)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+          <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+            <RecurringManager
+              templates={templates}
+              suggestions={allCategories}
+              onAdd={handleAddRecurring}
+              onDelete={handleDeleteRecurring}
+              onToggle={handleToggleRecurring}
             />
+            {templates.length > 0 && (
+              <ProcessRecurringButton action={handleProcessRecurring} />
+            )}
+          </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <label className="cursor-pointer">
-                <input
-                  type="radio"
-                  name="type"
-                  value="expense"
-                  defaultChecked
-                  className="peer sr-only"
-                />
-                <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-red-600 peer-checked:text-white peer-checked:border-red-600 transition">
-                  ↓ Keluar
-                </div>
-              </label>
-              <label className="cursor-pointer">
-                <input
-                  type="radio"
-                  name="type"
-                  value="income"
-                  className="peer sr-only"
-                />
-                <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-600 transition">
-                  ↑ Masuk
-                </div>
-              </label>
-            </div>
-
-            <AmountInput name="amount" required />
-
-            <CategoryInput name="category" suggestions={allCategories} />
-
-            <input
-              name="notes"
-              placeholder="Catatan (opsional)"
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+          <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+            <BudgetManager
+              budgets={budgets}
+              categories={allCategories}
+              onAdd={handleAddBudget}
+              onDelete={handleDeleteBudget}
             />
-
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2.5 rounded-lg transition shadow-sm"
-            >
-              Simpan
-            </button>
-            <p className="text-[10px] text-center text-gray-400 dark:text-gray-500">
-              Tip: tekan{" "}
-              <kbd className="px-1 rounded bg-gray-100 dark:bg-gray-800">
-                Enter
-              </kbd>{" "}
-              di kolom manapun untuk simpan
-            </p>
-          </form>
+          </div>
         </aside>
 
         {/* MAIN */}
@@ -329,6 +405,10 @@ export default async function Home({
           )}
 
           <FilterBar categories={categories} currentMonth={activeMonth} />
+
+          {budgetStatuses.length > 0 && (
+            <BudgetProgress items={budgetStatuses} />
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 shadow-sm">
@@ -450,16 +530,11 @@ export default async function Home({
                           {t.type === "income" ? "+" : "-"}
                           {formatRupiah(t.amount)}
                         </p>
-                        <form action={handleDelete}>
-                          <input type="hidden" name="id" value={t.id} />
-                          <button
-                            type="submit"
-                            className="text-gray-300 hover:text-red-500 text-xs transition p-1"
-                            aria-label="Hapus"
-                          >
-                            ✕
-                          </button>
-                        </form>
+                        <DeleteButton
+                          id={t.id}
+                          category={t.category}
+                          action={handleDelete}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -469,6 +544,7 @@ export default async function Home({
           </section>
         </main>
 
+        {/* RIGHT PANEL */}
         <aside className="lg:col-span-3 space-y-4 lg:sticky lg:top-20 lg:self-start">
           <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">

@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import InstallPrompt from "@/components/InstallPrompt";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import Toaster from "@/components/Toaster";
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -42,6 +43,7 @@ export default function RootLayout({
         {children}
         <InstallPrompt />
         <ServiceWorkerRegister />
+        <Toaster />
       </body>
     </html>
   );
