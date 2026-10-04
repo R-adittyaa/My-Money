@@ -9,14 +9,14 @@ import {
 } from "recharts";
 
 const COLORS = [
-  "#dc2626", // red
-  "#f59e0b", // amber
-  "#10b981", // emerald
-  "#3b82f6", // blue
-  "#8b5cf6", // violet
-  "#ec4899", // pink
-  "#14b8a6", // teal
-  "#f97316", // orange
+  "#dc2626",
+  "#f59e0b",
+  "#10b981",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
+  "#f97316",
 ];
 
 type Item = {
@@ -56,7 +56,7 @@ export default function CategoryChart({ data }: { data: Item[] }) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(v: number) => "Rp " + v.toLocaleString("id-ID")}
+              formatter={(v) => "Rp " + Number(v).toLocaleString("id-ID")}
               contentStyle={{
                 background: "rgba(0,0,0,0.85)",
                 border: "none",
@@ -73,10 +73,7 @@ export default function CategoryChart({ data }: { data: Item[] }) {
         {data.slice(0, 6).map((d, i) => {
           const pct = ((d.value / total) * 100).toFixed(1);
           return (
-            <li
-              key={d.name}
-              className="flex items-center gap-2 text-xs"
-            >
+            <li key={d.name} className="flex items-center gap-2 text-xs">
               <span
                 className="w-3 h-3 rounded-sm shrink-0"
                 style={{ background: COLORS[i % COLORS.length] }}
