@@ -8,7 +8,6 @@ import {
   BudgetInput,
 } from "./types";
 
-// Trim env vars buat handle whitespace/newline yang gak sengaja ke-copy
 const redis = new Redis({
   url: (process.env.UPSTASH_REDIS_REST_URL || "").trim(),
   token: (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim(),
@@ -99,10 +98,16 @@ export async function toggleRecurring(id: string, active: boolean) {
   await saveRecurring(updated);
 }
 
+/**
+ * Optimized: fetch semua data SEKALI, process di memory, save SEKALI.
+ */
 export async function processRecurring(): Promise<number> {
-  const templates = await getRecurring();
-  const activeTemplates = templates.filter((t) => t.active);
+  const [templates, transactions] = await Promise.all([
+    getRecurring(),
+    getTransactions(),
+  ]);
 
+  const activeTemplates = templates.filter((t) => t.active);
   if (activeTemplates.length === 0) return 0;
 
   const now = new Date();
@@ -110,21 +115,18 @@ export async function processRecurring(): Promise<number> {
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
   let generated = 0;
-  const updates: RecurringTemplate[] = [];
+  const newTransactions: Transaction[] = [];
+  const updatedTemplates: RecurringTemplate[] = [];
 
   for (const tpl of activeTemplates) {
-    if (tpl.lastGenerated === currentMonth) {
-      updates.push(tpl);
-      continue;
-    }
-
-    if (tpl.dayOfMonth > today) {
-      updates.push(tpl);
+    if (tpl.lastGenerated === currentMonth || tpl.dayOfMonth > today) {
+      updatedTemplates.push(tpl);
       continue;
     }
 
     const dateStr = `${currentMonth}-${String(tpl.dayOfMonth).padStart(2, "0")}`;
-    await addTransaction({
+    newTransactions.unshift({
+      id: crypto.randomUUID(),
       date: dateStr,
       amount: tpl.amount,
       type: tpl.type,
@@ -132,15 +134,22 @@ export async function processRecurring(): Promise<number> {
       notes: tpl.notes || "(berulang)",
     });
 
-    updates.push({ ...tpl, lastGenerated: currentMonth });
+    updatedTemplates.push({ ...tpl, lastGenerated: currentMonth });
     generated++;
   }
 
+  if (generated === 0) return 0;
+
+  // Simpan sekali doang — paralel
   const allTemplates = templates.map((t) => {
-    const updated = updates.find((u) => u.id === t.id);
+    const updated = updatedTemplates.find((u) => u.id === t.id);
     return updated || t;
   });
-  await saveRecurring(allTemplates);
+
+  await Promise.all([
+    saveTransactions([...newTransactions, ...transactions]),
+    saveRecurring(allTemplates),
+  ]);
 
   return generated;
 }

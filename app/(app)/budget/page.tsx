@@ -12,8 +12,10 @@ import BudgetProgress from "@/components/BudgetProgress";
 export default async function BudgetPage() {
   await processRecurring();
 
-  const budgets = await getBudgets();
-  const all = await getTransactions();
+  const [budgets, all] = await Promise.all([
+  getBudgets(),
+  getTransactions(),
+]);
 
   const allCategories = Array.from(
     new Set(all.map((t) => t.category))

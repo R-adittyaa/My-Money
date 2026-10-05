@@ -18,8 +18,10 @@ function formatRupiah(n: number): string {
 export default async function BerulangPage() {
   await processRecurring();
 
-  const templates = await getRecurring();
-  const all = await getTransactions();
+  const [templates, all] = await Promise.all([
+  getRecurring(),
+  getTransactions(),
+]);
 
   const allCategories = Array.from(
     new Set(all.map((t) => t.category))

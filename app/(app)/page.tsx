@@ -41,8 +41,10 @@ function formatTanggal(dateStr: string): string {
 export default async function DashboardPage() {
   await processRecurring();
 
-  const all = await getTransactions();
-  const budgets = await getBudgets();
+  const [all, budgets] = await Promise.all([
+  getTransactions(),
+  getBudgets(),
+]);
 
   const now = new Date();
   const activeMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
