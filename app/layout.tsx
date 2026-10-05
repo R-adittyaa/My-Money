@@ -4,6 +4,7 @@ import "./globals.css";
 import InstallPrompt from "@/components/InstallPrompt";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import Toaster from "@/components/Toaster";
+import SessionProvider from "@/components/SessionProvider";
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -40,10 +41,12 @@ export default function RootLayout({
       <body
         className={`${geist.className} bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen antialiased`}
       >
-        {children}
-        <InstallPrompt />
-        <ServiceWorkerRegister />
-        <Toaster />
+        <SessionProvider>
+          {children}
+          <InstallPrompt />
+          <ServiceWorkerRegister />
+          <Toaster />
+        </SessionProvider>
       </body>
     </html>
   );

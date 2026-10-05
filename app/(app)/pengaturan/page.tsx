@@ -1,7 +1,7 @@
 import { getTransactions } from "@/lib/storage";
 import ExportButton from "@/components/ExportButton";
+import LogoutButton from "@/components/LogoutButton";
 import { transactionsToCSV, generateFilename } from "@/lib/csv";
-import { revalidatePath } from "next/cache";
 
 export default async function PengaturanPage() {
   const all = await getTransactions();
@@ -51,6 +51,18 @@ export default async function PengaturanPage() {
         />
       </section>
 
+      {/* Akun — Logout */}
+      <section className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="w-1 h-4 bg-red-600 rounded-full"></span>
+          <h2 className="font-semibold text-sm">Akun</h2>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Keluar dari akun kamu di perangkat ini.
+        </p>
+        <LogoutButton />
+      </section>
+
       {/* Info */}
       <section className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
         <div className="flex items-center gap-2">
@@ -79,7 +91,7 @@ export default async function PengaturanPage() {
         </div>
       </section>
 
-      {/* Danger zone */}
+      {/* Tips */}
       <section className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 p-4 space-y-2">
         <div className="flex items-center gap-2">
           <span className="w-1 h-4 bg-red-600 rounded-full"></span>

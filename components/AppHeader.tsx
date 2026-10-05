@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LogoutButton from "./LogoutButton";
 
 export default function AppHeader() {
   return (
@@ -12,6 +13,7 @@ export default function AppHeader() {
             My<span className="text-red-600 dark:text-red-500">Money</span>
           </h1>
         </Link>
+        <LogoutButton />
       </div>
     </header>
   );
