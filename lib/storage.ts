@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { unstable_cache, revalidateTag } from "next/cache";
 import {
   Transaction,
   TransactionInput,
@@ -13,22 +14,26 @@ const redis = new Redis({
   token: (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim(),
 });
 
-// Key helper — per user
 const txKey = (userId: string) => `my-money:transactions:${userId}`;
 const recKey = (userId: string) => `my-money:recurring:${userId}`;
 const budgetKey = (userId: string) => `my-money:budgets:${userId}`;
 
 // ============ TRANSACTIONS ============
 
-export async function getTransactions(userId: string): Promise<Transaction[]> {
-  try {
-    const data = await redis.get<Transaction[]>(txKey(userId));
-    return data || [];
-  } catch (err) {
-    console.error("Redis get error:", err);
-    return [];
-  }
-}
+// Ambil data pakai cache (biar pindah page gak delay)
+export const getTransactions = unstable_cache(
+  async (userId: string): Promise<Transaction[]> => {
+    try {
+      const data = await redis.get<Transaction[]>(txKey(userId));
+      return data || [];
+    } catch (err) {
+      console.error("Redis get error:", err);
+      return [];
+    }
+  },
+  ["transactions-cache"],
+  { revalidate: 60, tags: ["transactions"] } // Cache berlaku 60 detik
+);
 
 export async function saveTransactions(
   userId: string,
@@ -53,6 +58,8 @@ export async function addTransaction(
   };
   items.unshift(newItem);
   await saveTransactions(userId, items);
+  
+  revalidateTag("transactions"); // Hapus cache biar langsung update
   return newItem;
 }
 
@@ -62,21 +69,25 @@ export async function deleteTransaction(userId: string, id: string) {
     userId,
     items.filter((t) => t.id !== id)
   );
+  
+  revalidateTag("transactions"); // Hapus cache
 }
 
 // ============ RECURRING ============
 
-export async function getRecurring(
-  userId: string
-): Promise<RecurringTemplate[]> {
-  try {
-    const data = await redis.get<RecurringTemplate[]>(recKey(userId));
-    return data || [];
-  } catch (err) {
-    console.error("Redis get recurring error:", err);
-    return [];
-  }
-}
+export const getRecurring = unstable_cache(
+  async (userId: string): Promise<RecurringTemplate[]> => {
+    try {
+      const data = await redis.get<RecurringTemplate[]>(recKey(userId));
+      return data || [];
+    } catch (err) {
+      console.error("Redis get recurring error:", err);
+      return [];
+    }
+  },
+  ["recurring-cache"],
+  { revalidate: 60, tags: ["recurring"] }
+);
 
 export async function saveRecurring(
   userId: string,
@@ -102,6 +113,8 @@ export async function addRecurring(
   };
   items.push(newItem);
   await saveRecurring(userId, items);
+  
+  revalidateTag("recurring");
   return newItem;
 }
 
@@ -111,6 +124,8 @@ export async function deleteRecurring(userId: string, id: string) {
     userId,
     items.filter((t) => t.id !== id)
   );
+  
+  revalidateTag("recurring");
 }
 
 export async function toggleRecurring(
@@ -121,6 +136,8 @@ export async function toggleRecurring(
   const items = await getRecurring(userId);
   const updated = items.map((t) => (t.id === id ? { ...t, active } : t));
   await saveRecurring(userId, updated);
+  
+  revalidateTag("recurring");
 }
 
 export async function processRecurring(userId: string): Promise<number> {
@@ -172,20 +189,27 @@ export async function processRecurring(userId: string): Promise<number> {
     saveRecurring(userId, allTemplates),
   ]);
 
+  revalidateTag("transactions");
+  revalidateTag("recurring");
+
   return generated;
 }
 
 // ============ BUDGETS ============
 
-export async function getBudgets(userId: string): Promise<Budget[]> {
-  try {
-    const data = await redis.get<Budget[]>(budgetKey(userId));
-    return data || [];
-  } catch (err) {
-    console.error("Redis get budgets error:", err);
-    return [];
-  }
-}
+export const getBudgets = unstable_cache(
+  async (userId: string): Promise<Budget[]> => {
+    try {
+      const data = await redis.get<Budget[]>(budgetKey(userId));
+      return data || [];
+    } catch (err) {
+      console.error("Redis get budgets error:", err);
+      return [];
+    }
+  },
+  ["budgets-cache"],
+  { revalidate: 60, tags: ["budgets"] }
+);
 
 export async function saveBudgets(userId: string, items: Budget[]) {
   try {
@@ -206,6 +230,8 @@ export async function addBudget(userId: string, input: BudgetInput) {
   };
   filtered.push(newItem);
   await saveBudgets(userId, filtered);
+  
+  revalidateTag("budgets");
   return newItem;
 }
 
@@ -215,4 +241,6 @@ export async function deleteBudget(userId: string, id: string) {
     userId,
     items.filter((b) => b.id !== id)
   );
+  
+  revalidateTag("budgets");
 }
