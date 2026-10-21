@@ -20,7 +20,6 @@ const budgetKey = (userId: string) => `my-money:budgets:${userId}`;
 
 // ============ TRANSACTIONS ============
 
-// Ambil data pakai cache (biar pindah page gak delay)
 export const getTransactions = unstable_cache(
   async (userId: string): Promise<Transaction[]> => {
     try {
@@ -32,7 +31,7 @@ export const getTransactions = unstable_cache(
     }
   },
   ["transactions-cache"],
-  { revalidate: 60, tags: ["transactions"] } // Cache berlaku 60 detik
+  { revalidate: 60, tags: ["transactions"] }
 );
 
 export async function saveTransactions(
@@ -59,7 +58,7 @@ export async function addTransaction(
   items.unshift(newItem);
   await saveTransactions(userId, items);
   
-  revalidateTag("transactions"); // Hapus cache biar langsung update
+  revalidateTag("transactions", "max"); // <-- Diperbaiki
   return newItem;
 }
 
@@ -70,7 +69,7 @@ export async function deleteTransaction(userId: string, id: string) {
     items.filter((t) => t.id !== id)
   );
   
-  revalidateTag("transactions"); // Hapus cache
+  revalidateTag("transactions", "max"); // <-- Diperbaiki
 }
 
 // ============ RECURRING ============
@@ -114,7 +113,7 @@ export async function addRecurring(
   items.push(newItem);
   await saveRecurring(userId, items);
   
-  revalidateTag("recurring");
+  revalidateTag("recurring", "max"); // <-- Diperbaiki
   return newItem;
 }
 
@@ -125,7 +124,7 @@ export async function deleteRecurring(userId: string, id: string) {
     items.filter((t) => t.id !== id)
   );
   
-  revalidateTag("recurring");
+  revalidateTag("recurring", "max"); // <-- Diperbaiki
 }
 
 export async function toggleRecurring(
@@ -137,7 +136,7 @@ export async function toggleRecurring(
   const updated = items.map((t) => (t.id === id ? { ...t, active } : t));
   await saveRecurring(userId, updated);
   
-  revalidateTag("recurring");
+  revalidateTag("recurring", "max"); // <-- Diperbaiki
 }
 
 export async function processRecurring(userId: string): Promise<number> {
@@ -189,8 +188,8 @@ export async function processRecurring(userId: string): Promise<number> {
     saveRecurring(userId, allTemplates),
   ]);
 
-  revalidateTag("transactions");
-  revalidateTag("recurring");
+  revalidateTag("transactions", "max"); // <-- Diperbaiki
+  revalidateTag("recurring", "max"); // <-- Diperbaiki
 
   return generated;
 }
@@ -231,7 +230,7 @@ export async function addBudget(userId: string, input: BudgetInput) {
   filtered.push(newItem);
   await saveBudgets(userId, filtered);
   
-  revalidateTag("budgets");
+  revalidateTag("budgets", "max"); // <-- Diperbaiki
   return newItem;
 }
 
@@ -242,5 +241,5 @@ export async function deleteBudget(userId: string, id: string) {
     items.filter((b) => b.id !== id)
   );
   
-  revalidateTag("budgets");
+  revalidateTag("budgets", "max"); // <-- Diperbaiki
 }
