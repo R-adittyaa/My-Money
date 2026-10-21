@@ -8,7 +8,7 @@ export default auth((req) => {
   const isApiRegister = path === "/api/register";
   const isPublicFile =
     path.startsWith("/_next") ||
-    path.startsWith("/icon-") ||
+    path.startsWith("/icons/") ||
     path === "/favicon.ico" ||
     path === "/manifest.json" ||
     path === "/sw.js" ||
@@ -37,6 +37,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!api/auth|api/register|_next/static|_next/image|favicon.ico|icon-|manifest.json|sw.js|offline).*)",
+    "/((?!api/auth|api/register|_next/static|_next/image|favicon.ico|icons/|manifest.json|sw.js|offline).*)",
   ],
 };
