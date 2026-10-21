@@ -4,6 +4,8 @@ import {
   deleteTransaction,
   processRecurring,
 } from "@/lib/storage";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import FilterBar from "@/components/FilterBar";
 import TransactionForm from "@/components/TransactionForm";
@@ -49,10 +51,14 @@ export default async function TransaksiPage({
     sort?: string;
   }>;
 }) {
-  const params = await searchParams;
-  await processRecurring();
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  const userId = session.user.id;
 
-  const all = await getTransactions();
+  const params = await searchParams;
+  await processRecurring(userId);
+
+  const all = await getTransactions(userId);
 
   const availableMonths = Array.from(
     new Set(all.map((t) => t.date.slice(0, 7)))
@@ -122,9 +128,11 @@ export default async function TransaksiPage({
 
   async function handleAdd(formData: FormData) {
     "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
     const amount = Number(formData.get("amount"));
     if (!amount || amount <= 0) throw new Error("Invalid amount");
-    await addTransaction({
+    await addTransaction(session.user.id, {
       date: formData.get("date") as string,
       amount,
       type: formData.get("type") as "income" | "expense",
@@ -137,7 +145,9 @@ export default async function TransaksiPage({
 
   async function handleDelete(formData: FormData) {
     "use server";
-    await deleteTransaction(formData.get("id") as string);
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    await deleteTransaction(session.user.id, formData.get("id") as string);
     revalidatePath("/transaksi");
     revalidatePath("/");
   }

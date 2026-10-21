@@ -6,6 +6,8 @@ import {
   processRecurring,
   getTransactions,
 } from "@/lib/storage";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import RecurringManager from "@/components/RecurringManager";
 import ProcessRecurringButton from "@/components/ProcessRecurringButton";
@@ -16,12 +18,16 @@ function formatRupiah(n: number): string {
 }
 
 export default async function BerulangPage() {
-  await processRecurring();
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  const userId = session.user.id;
+
+  await processRecurring(userId);
 
   const [templates, all] = await Promise.all([
-  getRecurring(),
-  getTransactions(),
-]);
+    getRecurring(userId),
+    getTransactions(userId),
+  ]);
 
   const allCategories = Array.from(
     new Set(all.map((t) => t.category))
@@ -31,13 +37,15 @@ export default async function BerulangPage() {
 
   async function handleAdd(formData: FormData) {
     "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
     const amount = Number(formData.get("amount"));
     const dayOfMonth = Number(formData.get("dayOfMonth"));
     if (!amount || amount <= 0) throw new Error("Invalid amount");
     if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) {
       throw new Error("Invalid day");
     }
-    await addRecurring({
+    await addRecurring(session.user.id, {
       category: (formData.get("category") as string).trim(),
       amount,
       type: formData.get("type") as "income" | "expense",
@@ -52,23 +60,29 @@ export default async function BerulangPage() {
 
   async function handleDelete(formData: FormData) {
     "use server";
-    await deleteRecurring(formData.get("id") as string);
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    await deleteRecurring(session.user.id, formData.get("id") as string);
     revalidatePath("/berulang");
     revalidatePath("/");
   }
 
   async function handleToggle(formData: FormData) {
     "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
     const id = formData.get("id") as string;
     const active = formData.get("active") === "1";
-    await toggleRecurring(id, active);
+    await toggleRecurring(session.user.id, id, active);
     revalidatePath("/berulang");
     revalidatePath("/");
   }
 
   async function handleProcess(): Promise<number> {
     "use server";
-    const count = await processRecurring();
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    const count = await processRecurring(session.user.id);
     revalidatePath("/berulang");
     revalidatePath("/");
     return count;
@@ -90,7 +104,6 @@ export default async function BerulangPage() {
         Template transaksi otomatis — cocok buat gaji, sewa, langganan
       </p>
 
-      {/* Stats */}
       {templates.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-gradient-to-br from-green-500 to-green-700 p-4 text-white shadow-sm">
@@ -120,7 +133,6 @@ export default async function BerulangPage() {
         </div>
       )}
 
-      {/* Manager */}
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
         <RecurringManager
           templates={templates}
@@ -134,7 +146,6 @@ export default async function BerulangPage() {
         )}
       </div>
 
-      {/* Info */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-4">
         <p className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
           Cara kerja
@@ -142,19 +153,30 @@ export default async function BerulangPage() {
         <ul className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
           <li className="flex gap-2">
             <span className="text-red-500">•</span>
-            <span>Template otomatis jalan tiap bulan di tanggal yang ditentukan</span>
+            <span>
+              Template otomatis jalan tiap bulan di tanggal yang ditentukan
+            </span>
           </li>
           <li className="flex gap-2">
             <span className="text-red-500">•</span>
-            <span>Generate otomatis pas kamu buka app, atau klik <strong>Generate Sekarang</strong></span>
+            <span>
+              Generate otomatis pas kamu buka app, atau klik{" "}
+              <strong>Generate Sekarang</strong>
+            </span>
           </li>
           <li className="flex gap-2">
             <span className="text-red-500">•</span>
-            <span>Toggle <span className="text-green-600 dark:text-green-400">hijau</span> = aktif, <span className="text-gray-500">abu-abu</span> = nonaktif</span>
+            <span>
+              Toggle{" "}
+              <span className="text-green-600 dark:text-green-400">hijau</span>{" "}
+              = aktif, <span className="text-gray-500">abu-abu</span> = nonaktif
+            </span>
           </li>
           <li className="flex gap-2">
             <span className="text-red-500">•</span>
-            <span>Template yang <strong>nonaktif</strong> gak bakal auto-generate</span>
+            <span>
+              Template yang <strong>nonaktif</strong> gak bakal auto-generate
+            </span>
           </li>
         </ul>
       </div>

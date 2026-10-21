@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { findUserByUsername, verifyPassword } from "@/lib/auth-helpers";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -13,17 +14,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const username = (credentials?.username as string)?.trim();
         const password = (credentials?.password as string)?.trim();
 
-        const validUsername = (process.env.AUTH_USERNAME || "").trim();
-        const validPassword = (process.env.AUTH_PASSWORD || "").trim();
-
         if (!username || !password) return null;
-        if (username !== validUsername) return null;
-        if (password !== validPassword) return null;
+
+        const user = await findUserByUsername(username);
+        if (!user) return null;
+
+        const valid = await verifyPassword(user, password);
+        if (!valid) return null;
 
         return {
-          id: "1",
-          name: username,
-          email: `${username}@mymoney.local`,
+          id: user.id,
+          name: user.displayName,
+          email: `${user.username}@mymoney.local`,
         };
       },
     }),
@@ -33,7 +35,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 hari
+    maxAge: 30 * 24 * 60 * 60,
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.userId = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token.userId) {
+        session.user.id = token.userId as string;
+      }
+      return session;
+    },
   },
   trustHost: true,
+  secret: process.env.AUTH_SECRET,
 });

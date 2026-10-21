@@ -13,15 +13,16 @@ const redis = new Redis({
   token: (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim(),
 });
 
-const TX_KEY = "my-money:transactions";
-const REC_KEY = "my-money:recurring";
-const BUDGET_KEY = "my-money:budgets";
+// Key helper — per user
+const txKey = (userId: string) => `my-money:transactions:${userId}`;
+const recKey = (userId: string) => `my-money:recurring:${userId}`;
+const budgetKey = (userId: string) => `my-money:budgets:${userId}`;
 
 // ============ TRANSACTIONS ============
 
-export async function getTransactions(): Promise<Transaction[]> {
+export async function getTransactions(userId: string): Promise<Transaction[]> {
   try {
-    const data = await redis.get<Transaction[]>(TX_KEY);
+    const data = await redis.get<Transaction[]>(txKey(userId));
     return data || [];
   } catch (err) {
     console.error("Redis get error:", err);
@@ -29,36 +30,47 @@ export async function getTransactions(): Promise<Transaction[]> {
   }
 }
 
-export async function saveTransactions(items: Transaction[]) {
+export async function saveTransactions(
+  userId: string,
+  items: Transaction[]
+) {
   try {
-    await redis.set(TX_KEY, items);
+    await redis.set(txKey(userId), items);
   } catch (err) {
     console.error("Redis set error:", err);
     throw err;
   }
 }
 
-export async function addTransaction(input: TransactionInput) {
-  const items = await getTransactions();
+export async function addTransaction(
+  userId: string,
+  input: TransactionInput
+) {
+  const items = await getTransactions(userId);
   const newItem: Transaction = {
     ...input,
     id: crypto.randomUUID(),
   };
   items.unshift(newItem);
-  await saveTransactions(items);
+  await saveTransactions(userId, items);
   return newItem;
 }
 
-export async function deleteTransaction(id: string) {
-  const items = await getTransactions();
-  await saveTransactions(items.filter((t) => t.id !== id));
+export async function deleteTransaction(userId: string, id: string) {
+  const items = await getTransactions(userId);
+  await saveTransactions(
+    userId,
+    items.filter((t) => t.id !== id)
+  );
 }
 
 // ============ RECURRING ============
 
-export async function getRecurring(): Promise<RecurringTemplate[]> {
+export async function getRecurring(
+  userId: string
+): Promise<RecurringTemplate[]> {
   try {
-    const data = await redis.get<RecurringTemplate[]>(REC_KEY);
+    const data = await redis.get<RecurringTemplate[]>(recKey(userId));
     return data || [];
   } catch (err) {
     console.error("Redis get recurring error:", err);
@@ -66,45 +78,55 @@ export async function getRecurring(): Promise<RecurringTemplate[]> {
   }
 }
 
-export async function saveRecurring(items: RecurringTemplate[]) {
+export async function saveRecurring(
+  userId: string,
+  items: RecurringTemplate[]
+) {
   try {
-    await redis.set(REC_KEY, items);
+    await redis.set(recKey(userId), items);
   } catch (err) {
     console.error("Redis set recurring error:", err);
     throw err;
   }
 }
 
-export async function addRecurring(input: RecurringTemplateInput) {
-  const items = await getRecurring();
+export async function addRecurring(
+  userId: string,
+  input: RecurringTemplateInput
+) {
+  const items = await getRecurring(userId);
   const newItem: RecurringTemplate = {
     ...input,
     id: crypto.randomUUID(),
     lastGenerated: null,
   };
   items.push(newItem);
-  await saveRecurring(items);
+  await saveRecurring(userId, items);
   return newItem;
 }
 
-export async function deleteRecurring(id: string) {
-  const items = await getRecurring();
-  await saveRecurring(items.filter((t) => t.id !== id));
+export async function deleteRecurring(userId: string, id: string) {
+  const items = await getRecurring(userId);
+  await saveRecurring(
+    userId,
+    items.filter((t) => t.id !== id)
+  );
 }
 
-export async function toggleRecurring(id: string, active: boolean) {
-  const items = await getRecurring();
+export async function toggleRecurring(
+  userId: string,
+  id: string,
+  active: boolean
+) {
+  const items = await getRecurring(userId);
   const updated = items.map((t) => (t.id === id ? { ...t, active } : t));
-  await saveRecurring(updated);
+  await saveRecurring(userId, updated);
 }
 
-/**
- * Optimized: fetch semua data SEKALI, process di memory, save SEKALI.
- */
-export async function processRecurring(): Promise<number> {
+export async function processRecurring(userId: string): Promise<number> {
   const [templates, transactions] = await Promise.all([
-    getRecurring(),
-    getTransactions(),
+    getRecurring(userId),
+    getTransactions(userId),
   ]);
 
   const activeTemplates = templates.filter((t) => t.active);
@@ -140,15 +162,14 @@ export async function processRecurring(): Promise<number> {
 
   if (generated === 0) return 0;
 
-  // Simpan sekali doang — paralel
   const allTemplates = templates.map((t) => {
     const updated = updatedTemplates.find((u) => u.id === t.id);
     return updated || t;
   });
 
   await Promise.all([
-    saveTransactions([...newTransactions, ...transactions]),
-    saveRecurring(allTemplates),
+    saveTransactions(userId, [...newTransactions, ...transactions]),
+    saveRecurring(userId, allTemplates),
   ]);
 
   return generated;
@@ -156,9 +177,9 @@ export async function processRecurring(): Promise<number> {
 
 // ============ BUDGETS ============
 
-export async function getBudgets(): Promise<Budget[]> {
+export async function getBudgets(userId: string): Promise<Budget[]> {
   try {
-    const data = await redis.get<Budget[]>(BUDGET_KEY);
+    const data = await redis.get<Budget[]>(budgetKey(userId));
     return data || [];
   } catch (err) {
     console.error("Redis get budgets error:", err);
@@ -166,17 +187,17 @@ export async function getBudgets(): Promise<Budget[]> {
   }
 }
 
-export async function saveBudgets(items: Budget[]) {
+export async function saveBudgets(userId: string, items: Budget[]) {
   try {
-    await redis.set(BUDGET_KEY, items);
+    await redis.set(budgetKey(userId), items);
   } catch (err) {
     console.error("Redis set budgets error:", err);
     throw err;
   }
 }
 
-export async function addBudget(input: BudgetInput) {
-  const items = await getBudgets();
+export async function addBudget(userId: string, input: BudgetInput) {
+  const items = await getBudgets(userId);
   const filtered = items.filter((b) => b.category !== input.category);
   const newItem: Budget = {
     ...input,
@@ -184,11 +205,14 @@ export async function addBudget(input: BudgetInput) {
     createdAt: new Date().toISOString(),
   };
   filtered.push(newItem);
-  await saveBudgets(filtered);
+  await saveBudgets(userId, filtered);
   return newItem;
 }
 
-export async function deleteBudget(id: string) {
-  const items = await getBudgets();
-  await saveBudgets(items.filter((b) => b.id !== id));
+export async function deleteBudget(userId: string, id: string) {
+  const items = await getBudgets(userId);
+  await saveBudgets(
+    userId,
+    items.filter((b) => b.id !== id)
+  );
 }

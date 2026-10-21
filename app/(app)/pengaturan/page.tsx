@@ -1,10 +1,17 @@
 import { getTransactions } from "@/lib/storage";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import ExportButton from "@/components/ExportButton";
 import LogoutButton from "@/components/LogoutButton";
+import AccountSettings from "@/components/AccountSettings";
 import { transactionsToCSV, generateFilename } from "@/lib/csv";
 
 export default async function PengaturanPage() {
-  const all = await getTransactions();
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  const userId = session.user.id;
+
+  const all = await getTransactions(userId);
 
   const availableMonths = Array.from(
     new Set(all.map((t) => t.date.slice(0, 7)))
@@ -18,7 +25,9 @@ export default async function PengaturanPage() {
     filename: string;
   }> {
     "use server";
-    const all = await getTransactions();
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    const all = await getTransactions(session.user.id);
     const data = month ? all.filter((t) => t.date.startsWith(month)) : all;
     const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date));
     return {
@@ -49,6 +58,15 @@ export default async function PengaturanPage() {
           availableMonths={availableMonths}
           currentMonth={currentMonth}
         />
+      </section>
+
+      {/* Ganti Password */}
+      <section className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="w-1 h-4 bg-red-600 rounded-full"></span>
+          <h2 className="font-semibold text-sm">Ganti Password</h2>
+        </div>
+        <AccountSettings />
       </section>
 
       {/* Akun — Logout */}

@@ -36,3 +36,11 @@ export type Budget = {
 };
 
 export type BudgetInput = Omit<Budget, "id" | "createdAt">;
+
+export type User = {
+  id: string;
+  username: string;
+  passwordHash: string;
+  displayName: string;
+  createdAt: string;
+};

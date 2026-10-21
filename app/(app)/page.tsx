@@ -4,6 +4,8 @@ import {
   processRecurring,
   getBudgets,
 } from "@/lib/storage";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import CategoryChart from "@/components/CategoryChart";
@@ -39,12 +41,16 @@ function formatTanggal(dateStr: string): string {
 }
 
 export default async function DashboardPage() {
-  await processRecurring();
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  const userId = session.user.id;
+
+  await processRecurring(userId);
 
   const [all, budgets] = await Promise.all([
-  getTransactions(),
-  getBudgets(),
-]);
+    getTransactions(userId),
+    getBudgets(userId),
+  ]);
 
   const now = new Date();
   const activeMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -94,7 +100,9 @@ export default async function DashboardPage() {
 
   async function handleDelete(formData: FormData) {
     "use server";
-    await deleteTransaction(formData.get("id") as string);
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    await deleteTransaction(session.user.id, formData.get("id") as string);
     revalidatePath("/");
   }
 
@@ -105,7 +113,6 @@ export default async function DashboardPage() {
 
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0">
-      {/* HERO SALDO */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-5 sm:p-6 text-white shadow-lg">
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute -bottom-16 -left-16 w-52 h-52 rounded-full bg-black/10 blur-3xl" />
@@ -137,7 +144,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* STAT CARDS */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 shadow-sm">
           <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -173,10 +179,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* BUDGET PROGRESS */}
       {budgetStatuses.length > 0 && <BudgetProgress items={budgetStatuses} />}
 
-      {/* CHART PENGELUARAN */}
       {expenseByCategory.length > 0 && (
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
@@ -195,7 +199,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* TRANSAKSI TERBARU */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

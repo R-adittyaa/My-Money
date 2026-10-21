@@ -5,17 +5,23 @@ import {
   getTransactions,
   processRecurring,
 } from "@/lib/storage";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import BudgetManager from "@/components/BudgetManager";
 import BudgetProgress from "@/components/BudgetProgress";
 
 export default async function BudgetPage() {
-  await processRecurring();
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  const userId = session.user.id;
+
+  await processRecurring(userId);
 
   const [budgets, all] = await Promise.all([
-  getBudgets(),
-  getTransactions(),
-]);
+    getBudgets(userId),
+    getTransactions(userId),
+  ]);
 
   const allCategories = Array.from(
     new Set(all.map((t) => t.category))
@@ -37,18 +43,22 @@ export default async function BudgetPage() {
 
   async function handleAdd(formData: FormData) {
     "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
     const limit = Number(formData.get("limit"));
     const category = (formData.get("category") as string).trim();
     if (!limit || limit <= 0) throw new Error("Invalid limit");
     if (!category) throw new Error("Invalid category");
-    await addBudget({ category, limit });
+    await addBudget(session.user.id, { category, limit });
     revalidatePath("/budget");
     revalidatePath("/");
   }
 
   async function handleDelete(formData: FormData) {
     "use server";
-    await deleteBudget(formData.get("id") as string);
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    await deleteBudget(session.user.id, formData.get("id") as string);
     revalidatePath("/budget");
     revalidatePath("/");
   }
@@ -69,10 +79,8 @@ export default async function BudgetPage() {
         Progress budget · {monthLabel}
       </p>
 
-      {/* Progress overview */}
       {budgetStatuses.length > 0 && <BudgetProgress items={budgetStatuses} />}
 
-      {/* Manager */}
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
         <BudgetManager
           budgets={budgets}
@@ -82,7 +90,6 @@ export default async function BudgetPage() {
         />
       </div>
 
-      {/* Info */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-4">
         <p className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
           Cara kerja
@@ -90,19 +97,35 @@ export default async function BudgetPage() {
         <ul className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
           <li className="flex gap-2">
             <span className="text-red-500">•</span>
-            <span>Budget itu <strong>per kategori</strong>, berlaku tiap bulan</span>
+            <span>
+              Budget itu <strong>per kategori</strong>, berlaku tiap bulan
+            </span>
           </li>
           <li className="flex gap-2">
             <span className="text-red-500">•</span>
-            <span>Progress dihitung dari <strong>pengeluaran bulan ini</strong></span>
+            <span>
+              Progress dihitung dari <strong>pengeluaran bulan ini</strong>
+            </span>
           </li>
           <li className="flex gap-2">
             <span className="text-red-500">•</span>
-            <span>Warna: <span className="text-green-600 dark:text-green-400">hijau</span> &lt;80%, <span className="text-amber-600 dark:text-amber-400">kuning</span> 80-99%, <span className="text-red-600 dark:text-red-400">merah</span> ≥100%</span>
+            <span>
+              Warna:{" "}
+              <span className="text-green-600 dark:text-green-400">hijau</span>{" "}
+              &lt;80%,{" "}
+              <span className="text-amber-600 dark:text-amber-400">
+                kuning
+              </span>{" "}
+              80-99%,{" "}
+              <span className="text-red-600 dark:text-red-400">merah</span>{" "}
+              ≥100%
+            </span>
           </li>
           <li className="flex gap-2">
             <span className="text-red-500">•</span>
-            <span>Kategori cuma muncul kalau udah pernah dipakai di transaksi</span>
+            <span>
+              Kategori cuma muncul kalau udah pernah dipakai di transaksi
+            </span>
           </li>
         </ul>
       </div>

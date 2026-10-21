@@ -1,4 +1,6 @@
 import { getTransactions, processRecurring } from "@/lib/storage";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import CategoryChart from "@/components/CategoryChart";
 
 function formatRupiah(n: number): string {
@@ -11,10 +13,14 @@ export default async function StatistikPage({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
-  const params = await searchParams;
-  await processRecurring();
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  const userId = session.user.id;
 
-  const all = await getTransactions();
+  const params = await searchParams;
+  await processRecurring(userId);
+
+  const all = await getTransactions(userId);
 
   const availableMonths = Array.from(
     new Set(all.map((t) => t.date.slice(0, 7)))
@@ -66,7 +72,6 @@ export default async function StatistikPage({
         <h1 className="text-lg font-bold">Statistik</h1>
       </div>
 
-      {/* Filter bulan */}
       {availableMonths.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {availableMonths.map((m) => {
@@ -92,7 +97,6 @@ export default async function StatistikPage({
         </div>
       )}
 
-      {/* Highlight cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 shadow-sm">
           <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -153,7 +157,6 @@ export default async function StatistikPage({
         </div>
       </div>
 
-      {/* Chart */}
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
           <span className="w-1 h-4 bg-red-600 rounded-full"></span>
@@ -162,7 +165,6 @@ export default async function StatistikPage({
         <CategoryChart data={expenseByCategory} />
       </div>
 
-      {/* List ranking */}
       {expenseByCategory.length > 0 && (
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
