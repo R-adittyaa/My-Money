@@ -4,14 +4,33 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: "🏠" },
-  { href: "/transaksi", label: "Transaksi", icon: "💰" },
-  { href: "/budget", label: "Budget", icon: "🎯" },
-  { href: "/goals", label: "Target", icon: "🏆" },
-  { href: "/berulang", label: "Berulang", icon: "🔁" },
-  { href: "/statistik", label: "Statistik", icon: "📊" },
-  { href: "/pengaturan", label: "Pengaturan", icon: "⚙️" },
+  { href: "/", label: "Dashboard", icon: "home" },
+  { href: "/transaksi", label: "Transaksi", icon: "receipt" },
+  { href: "/budget", label: "Budget", icon: "pie" },
+  { href: "/goals", label: "Target", icon: "target" },
+  { href: "/berulang", label: "Berulang", icon: "repeat" },
+  { href: "/statistik", label: "Statistik", icon: "chart" },
+  { href: "/pengaturan", label: "Pengaturan", icon: "settings" },
 ];
+
+// Komponen Ikon SVG
+function Icon({ name, className = "w-5 h-5" }: { name: string; className?: string }) {
+  const paths: Record<string, React.ReactNode> = {
+    home: <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+    receipt: <><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/></>,
+    pie: <><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></>,
+    target: <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
+    repeat: <><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></>,
+    chart: <><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></>,
+    settings: <><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>,
+  };
+
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      {paths[name]}
+    </svg>
+  );
+}
 
 export default function NavSidebar() {
   const pathname = usePathname();
@@ -34,7 +53,7 @@ export default function NavSidebar() {
                   : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               }`}
             >
-              <span className="text-base">{item.icon}</span>
+              <Icon name={item.icon} className={`w-5 h-5 ${isActive ? "text-red-600 dark:text-red-500" : "text-gray-400"}`} />
               <span>{item.label}</span>
             </Link>
           );
