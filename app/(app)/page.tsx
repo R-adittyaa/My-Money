@@ -10,9 +10,9 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import CategoryChart from "@/components/CategoryChart";
 import BudgetProgress from "@/components/BudgetProgress";
-import BudgetAlert from "@/components/BudgetAlert"; // <-- Import Banner
-import DeleteButton from "@/components/DeleteButton";
+import BudgetAlert from "@/components/BudgetAlert";
 import BalanceDisplay from "@/components/BalanceDisplay";
+import TransactionDetail from "@/components/TransactionDetail";
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
@@ -31,15 +31,6 @@ function categoryIcon(category: string): string {
 function formatRupiah(n: number): string {
   const sign = n < 0 ? "-" : "";
   return sign + "Rp " + Math.abs(n).toLocaleString("id-ID");
-}
-
-function formatTanggal(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 export default async function DashboardPage() {
@@ -118,35 +109,24 @@ export default async function DashboardPage() {
       {/* Banner Peringatan Budget */}
       {budgetStatuses.length > 0 && <BudgetAlert items={budgetStatuses} />}
 
+      {/* HERO SALDO */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-5 sm:p-6 text-white shadow-lg">
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute -bottom-16 -left-16 w-52 h-52 rounded-full bg-black/10 blur-3xl" />
+        
         <div className="relative">
           <p className="text-xs uppercase tracking-widest opacity-80">
             Saldo · {monthLabel}
           </p>
-          <BalanceDisplay balance={balance} />
-          <div className="grid grid-cols-2 gap-3 mt-5">
-            <div className="bg-white/15 rounded-xl p-3 backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] opacity-80 uppercase tracking-wide">
-                ↓ Pemasukan
-              </p>
-              <p className="text-sm sm:text-base font-semibold mt-1 tabular-nums">
-                {formatRupiah(totalIncome)}
-              </p>
-            </div>
-            <div className="bg-white/15 rounded-xl p-3 backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] opacity-80 uppercase tracking-wide">
-                ↑ Pengeluaran
-              </p>
-              <p className="text-sm sm:text-base font-semibold mt-1 tabular-nums">
-                {formatRupiah(totalExpense)}
-              </p>
-            </div>
-          </div>
+          <BalanceDisplay
+            balance={balance}
+            income={totalIncome}
+            expense={totalExpense}
+          />
         </div>
       </div>
 
+      {/* STATISTIK BAWAH SALDO */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 shadow-sm">
           <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -202,6 +182,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* TRANSAKSI TERBARU */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -232,33 +213,12 @@ export default async function DashboardPage() {
         ) : (
           <ul className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden shadow-sm">
             {recentTransactions.map((t) => (
-              <li key={t.id} className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center text-base shrink-0">
-                  {categoryIcon(t.category)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm truncate">{t.category}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {formatTanggal(t.date)}
-                    {t.notes && ` · ${t.notes}`}
-                  </p>
-                </div>
-                <p
-                  className={`text-sm font-semibold whitespace-nowrap tabular-nums ${
-                    t.type === "income"
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400"
-                  }`}
-                >
-                  {t.type === "income" ? "+" : "-"}
-                  {formatRupiah(t.amount)}
-                </p>
-                <DeleteButton
-                  id={t.id}
-                  category={t.category}
-                  action={handleDelete}
-                />
-              </li>
+              <TransactionDetail
+                key={t.id}
+                transaction={t}
+                categoryIcon={categoryIcon(t.category)}
+                onDelete={handleDelete}
+              />
             ))}
           </ul>
         )}

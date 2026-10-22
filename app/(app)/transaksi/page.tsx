@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import FilterBar from "@/components/FilterBar";
 import TransactionForm from "@/components/TransactionForm";
 import DeleteButton from "@/components/DeleteButton";
+import TransactionDetail from "@/components/TransactionDetail";
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
@@ -281,38 +282,15 @@ export default async function TransaksiPage({
               </div>
 
               <ul className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden shadow-sm">
-                {items.map((t) => (
-                  <li key={t.id} className="p-3 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center text-base shrink-0">
-                      {categoryIcon(t.category)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm truncate">
-                        {t.category}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {t.notes ||
-                          (t.type === "income" ? "Pemasukan" : "Pengeluaran")}
-                      </p>
-                    </div>
-                    <p
-                      className={`text-sm font-semibold whitespace-nowrap tabular-nums ${
-                        t.type === "income"
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-red-600 dark:text-red-400"
-                      }`}
-                    >
-                      {t.type === "income" ? "+" : "-"}
-                      {formatRupiah(t.amount)}
-                    </p>
-                    <DeleteButton
-                      id={t.id}
-                      category={t.category}
-                      action={handleDelete}
-                    />
-                  </li>
-                ))}
-              </ul>
+  {items.map((t) => (
+    <TransactionDetail
+      key={t.id}
+      transaction={t}
+      categoryIcon={categoryIcon(t.category)}
+      onDelete={handleDelete}
+    />
+  ))}
+</ul>
             </div>
           );
         })}

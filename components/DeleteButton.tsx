@@ -13,6 +13,8 @@ export default function DeleteButton({ id, category, action }: Props) {
   const [isPending, startTransition] = useTransition();
 
   function handleDelete(formData: FormData) {
+    if (!confirm("Yakin mau hapus transaksi ini?")) return;
+
     startTransition(async () => {
       try {
         await action(formData);
@@ -20,24 +22,21 @@ export default function DeleteButton({ id, category, action }: Props) {
           description: "Transaksi berhasil dihapus",
         });
       } catch (err) {
-        toast.error("Gagal menghapus", {
-          description: "Coba lagi ya",
-        });
+        toast.error("Gagal menghapus", { description: "Coba lagi ya" });
         console.error(err);
       }
     });
   }
 
   return (
-    <form action={handleDelete}>
+    <form action={handleDelete} className="w-full h-full">
       <input type="hidden" name="id" value={id} />
       <button
         type="submit"
         disabled={isPending}
-        className="text-gray-300 hover:text-red-500 text-xs transition p-1 disabled:opacity-50"
-        aria-label="Hapus"
+        className="w-full h-full py-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-medium text-sm hover:bg-red-100 dark:hover:bg-red-950/50 transition disabled:opacity-50"
       >
-        {isPending ? "..." : "✕"}
+        {isPending ? "Hapus..." : "Hapus"}
       </button>
     </form>
   );

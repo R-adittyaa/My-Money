@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { useRef } from "react";
+import { useRef, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import AmountInput from "./AmountInput";
 import CategoryInput from "./CategoryInput";
@@ -11,10 +11,9 @@ type Props = {
   suggestions: string[];
 };
 
-// Komponen Tombol Khusus
+// Tombol submit dengan loading state
 function SubmitButton() {
   const { pending } = useFormStatus();
-
   return (
     <button
       type="submit"
@@ -28,44 +27,47 @@ function SubmitButton() {
 
 export default function TransactionForm({ action, suggestions }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [isPending, startTransition] = useTransition();
 
-  async function handleSubmit(formData: FormData) {
+  // Fungsi handleSubmit pake useTransition
+  function onSubmit(formData: FormData) {
     const amount = Number(formData.get("amount"));
     const category = (formData.get("category") as string) || "";
     const type = formData.get("type") as string;
 
-    try {
-      await action(formData);
-      toast.success(
-        type === "income"
-          ? `Pemasukan "${category}" tersimpan!`
-          : `Pengeluaran "${category}" tersimpan!`,
-        {
-          description: `Rp ${amount.toLocaleString("id-ID")}`,
+    // Reset form DULUAN biar langsung kosong (Optimistic UI)
+    formRef.current?.reset();
+
+    startTransition(async () => {
+      try {
+        await action(formData);
+        toast.success(
+          type === "income"
+            ? `Pemasukan "${category}" tersimpan!`
+            : `Pengeluaran "${category}" tersimpan!`,
+          { description: `Rp ${amount.toLocaleString("id-ID")}` }
+        );
+      } catch (err: any) {
+        // Handle warning budget
+        if (err.message && err.message.includes("Budget")) {
+          toast.error(err.message, {
+            description: "Transaksi tersimpan, tapi budget kritis.",
+            duration: 5000,
+          });
+        } else {
+          toast.error("Gagal menyimpan transaksi", {
+            description: "Coba lagi sebentar lagi ya",
+          });
         }
-      );
-      formRef.current?.reset();
-    } catch (err: any) {
-      // TANGKEP PESAN BUDGET DARI SERVER
-      if (err.message && err.message.includes("Budget")) {
-        toast.error(err.message, {
-          description: "Transaksi tersimpan, tapi budget kamu kritis.",
-          duration: 5000,
-        });
-        formRef.current?.reset(); // Tetep reset karena sukses simpan
-      } else {
-        toast.error("Gagal menyimpan transaksi", {
-          description: "Coba lagi sebentar lagi ya",
-        });
+        console.error(err);
       }
-      console.error(err);
-    }
+    });
   }
 
   return (
     <form
       ref={formRef}
-      action={handleSubmit}
+      action={onSubmit}
       className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm space-y-3"
     >
       <div className="flex items-center gap-2">
@@ -83,24 +85,13 @@ export default function TransactionForm({ action, suggestions }: Props) {
 
       <div className="grid grid-cols-2 gap-2">
         <label className="cursor-pointer">
-          <input
-            type="radio"
-            name="type"
-            value="expense"
-            defaultChecked
-            className="peer sr-only"
-          />
+          <input type="radio" name="type" value="expense" defaultChecked className="peer sr-only" />
           <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-red-600 peer-checked:text-white peer-checked:border-red-600 transition">
             ↓ Keluar
           </div>
         </label>
         <label className="cursor-pointer">
-          <input
-            type="radio"
-            name="type"
-            value="income"
-            className="peer sr-only"
-          />
+          <input type="radio" name="type" value="income" className="peer sr-only" />
           <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-600 transition">
             ↑ Masuk
           </div>
@@ -108,7 +99,6 @@ export default function TransactionForm({ action, suggestions }: Props) {
       </div>
 
       <AmountInput name="amount" required />
-
       <CategoryInput name="category" suggestions={suggestions} />
 
       <input
@@ -120,9 +110,7 @@ export default function TransactionForm({ action, suggestions }: Props) {
       <SubmitButton />
       
       <p className="text-[10px] text-center text-gray-400 dark:text-gray-500">
-        Tip: tekan{" "}
-        <kbd className="px-1 rounded bg-gray-100 dark:bg-gray-800">Enter</kbd>{" "}
-        di kolom manapun untuk simpan
+        Tip: tekan <kbd className="px-1 rounded bg-gray-100 dark:bg-gray-800">Enter</kbd> di kolom manapun
       </p>
     </form>
   );
