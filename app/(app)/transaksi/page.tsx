@@ -3,6 +3,7 @@ import {
   addTransaction,
   deleteTransaction,
   processRecurring,
+  getBudgets, // <-- Import getBudgets buat cek notif
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -126,21 +127,56 @@ export default async function TransaksiPage({
     params.cat ||
     (params.sort && params.sort !== "newest");
 
+  // ==== SERVER ACTION: TAMBAH TRANSAKSI & CEK BUDGET ====
   async function handleAdd(formData: FormData) {
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
+    
     const amount = Number(formData.get("amount"));
+    const type = formData.get("type") as "income" | "expense";
+    const category = (formData.get("category") as string).trim();
+    const date = formData.get("date") as string;
+    
     if (!amount || amount <= 0) throw new Error("Invalid amount");
+
     await addTransaction(session.user.id, {
-      date: formData.get("date") as string,
+      date,
       amount,
-      type: formData.get("type") as "income" | "expense",
-      category: (formData.get("category") as string).trim(),
+      type,
+      category,
       notes: ((formData.get("notes") as string) || "").trim(),
     });
+
+    // Cek Budget
+    let warningMessage = "";
+    if (type === "expense") {
+      const budgets = await getBudgets(session.user.id);
+      const budget = budgets.find((b) => b.category === category);
+
+      if (budget) {
+        const allTxs = await getTransactions(session.user.id);
+        const currentMonth = date.slice(0, 7);
+        const spent = allTxs
+          .filter((t) => t.type === "expense" && t.category === category && t.date.startsWith(currentMonth))
+          .reduce((sum, t) => sum + t.amount, 0);
+
+        const pct = Math.round((spent / budget.limit) * 100);
+        
+        if (pct >= 100) {
+          warningMessage = `🚨 Budget ${category} sudah lewat batas! (${pct}%)`;
+        } else if (pct >= 80) {
+          warningMessage = `⚠️ Budget ${category} tinggal ${100 - pct}% lagi!`;
+        }
+      }
+    }
+
     revalidatePath("/transaksi");
     revalidatePath("/");
+    
+    if (warningMessage) {
+       throw new Error(warningMessage);
+    }
   }
 
   async function handleDelete(formData: FormData) {

@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import CategoryChart from "@/components/CategoryChart";
 import BudgetProgress from "@/components/BudgetProgress";
+import BudgetAlert from "@/components/BudgetAlert"; // <-- Import Banner
 import DeleteButton from "@/components/DeleteButton";
 
 function categoryIcon(category: string): string {
@@ -113,6 +114,9 @@ export default async function DashboardPage() {
 
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0">
+      {/* Banner Peringatan Budget */}
+      {budgetStatuses.length > 0 && <BudgetAlert items={budgetStatuses} />}
+
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-5 sm:p-6 text-white shadow-lg">
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute -bottom-16 -left-16 w-52 h-52 rounded-full bg-black/10 blur-3xl" />

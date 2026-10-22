@@ -11,7 +11,7 @@ type Props = {
   suggestions: string[];
 };
 
-// 1. Komponen Tombol Khusus (Biar bisa baca status form)
+// Komponen Tombol Khusus
 function SubmitButton() {
   const { pending } = useFormStatus();
 
@@ -45,10 +45,19 @@ export default function TransactionForm({ action, suggestions }: Props) {
         }
       );
       formRef.current?.reset();
-    } catch (err) {
-      toast.error("Gagal menyimpan transaksi", {
-        description: "Coba lagi sebentar lagi ya",
-      });
+    } catch (err: any) {
+      // TANGKEP PESAN BUDGET DARI SERVER
+      if (err.message && err.message.includes("Budget")) {
+        toast.error(err.message, {
+          description: "Transaksi tersimpan, tapi budget kamu kritis.",
+          duration: 5000,
+        });
+        formRef.current?.reset(); // Tetep reset karena sukses simpan
+      } else {
+        toast.error("Gagal menyimpan transaksi", {
+          description: "Coba lagi sebentar lagi ya",
+        });
+      }
       console.error(err);
     }
   }
@@ -108,9 +117,8 @@ export default function TransactionForm({ action, suggestions }: Props) {
         className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
       />
 
-      {/* 2. Panggil komponen tombolnya di sini */}
       <SubmitButton />
-
+      
       <p className="text-[10px] text-center text-gray-400 dark:text-gray-500">
         Tip: tekan{" "}
         <kbd className="px-1 rounded bg-gray-100 dark:bg-gray-800">Enter</kbd>{" "}
