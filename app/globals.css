@@ -60,3 +60,20 @@ select option {
 main {
   animation: fadeIn 0.3s ease-out forwards;
 }
+
+@keyframes slideInBottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: slideInFromBottom 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.slide-in-from-bottom-full {
+  animation-name: slideInBottom;
+}
