@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: "🏠" },
   { href: "/transaksi", label: "Transaksi", icon: "💰" },
   { href: "/budget", label: "Budget", icon: "🎯" },
+  { href: "/goals", label: "Target", icon: "🏆" },
   { href: "/berulang", label: "Berulang", icon: "🔁" },
   { href: "/statistik", label: "Statistik", icon: "📊" },
   { href: "/pengaturan", label: "Pengaturan", icon: "⚙️" },

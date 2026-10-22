@@ -44,3 +44,24 @@ export type User = {
   displayName: string;
   createdAt: string;
 };
+
+// === TIPE DATA BARU: TARGET TABUNGAN ===
+
+export type GoalDeposit = {
+  id: string;
+  amount: number;
+  date: string;
+};
+
+export type Goal = {
+  id: string;
+  title: string;
+  targetAmount: number;
+  deposits: GoalDeposit[];
+  createdAt: string;
+};
+
+export type GoalInput = {
+  title: string;
+  targetAmount: number;
+};

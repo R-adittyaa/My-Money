@@ -7,6 +7,8 @@ import {
   RecurringTemplateInput,
   Budget,
   BudgetInput,
+  Goal,
+  GoalInput,
 } from "./types";
 
 const redis = new Redis({
@@ -17,6 +19,7 @@ const redis = new Redis({
 const txKey = (userId: string) => `my-money:transactions:${userId}`;
 const recKey = (userId: string) => `my-money:recurring:${userId}`;
 const budgetKey = (userId: string) => `my-money:budgets:${userId}`;
+const goalKey = (userId: string) => `my-money:goals:${userId}`;
 
 // ============ TRANSACTIONS ============
 
@@ -34,10 +37,7 @@ export const getTransactions = unstable_cache(
   { revalidate: 60, tags: ["transactions"] }
 );
 
-export async function saveTransactions(
-  userId: string,
-  items: Transaction[]
-) {
+export async function saveTransactions(userId: string, items: Transaction[]) {
   try {
     await redis.set(txKey(userId), items);
   } catch (err) {
@@ -46,30 +46,19 @@ export async function saveTransactions(
   }
 }
 
-export async function addTransaction(
-  userId: string,
-  input: TransactionInput
-) {
+export async function addTransaction(userId: string, input: TransactionInput) {
   const items = await getTransactions(userId);
-  const newItem: Transaction = {
-    ...input,
-    id: crypto.randomUUID(),
-  };
+  const newItem: Transaction = { ...input, id: crypto.randomUUID() };
   items.unshift(newItem);
   await saveTransactions(userId, items);
-  
-  revalidateTag("transactions", "max"); // <-- Diperbaiki
+  revalidateTag("transactions", "max");
   return newItem;
 }
 
 export async function deleteTransaction(userId: string, id: string) {
   const items = await getTransactions(userId);
-  await saveTransactions(
-    userId,
-    items.filter((t) => t.id !== id)
-  );
-  
-  revalidateTag("transactions", "max"); // <-- Diperbaiki
+  await saveTransactions(userId, items.filter((t) => t.id !== id));
+  revalidateTag("transactions", "max");
 }
 
 // ============ RECURRING ============
@@ -88,10 +77,7 @@ export const getRecurring = unstable_cache(
   { revalidate: 60, tags: ["recurring"] }
 );
 
-export async function saveRecurring(
-  userId: string,
-  items: RecurringTemplate[]
-) {
+export async function saveRecurring(userId: string, items: RecurringTemplate[]) {
   try {
     await redis.set(recKey(userId), items);
   } catch (err) {
@@ -100,43 +86,26 @@ export async function saveRecurring(
   }
 }
 
-export async function addRecurring(
-  userId: string,
-  input: RecurringTemplateInput
-) {
+export async function addRecurring(userId: string, input: RecurringTemplateInput) {
   const items = await getRecurring(userId);
-  const newItem: RecurringTemplate = {
-    ...input,
-    id: crypto.randomUUID(),
-    lastGenerated: null,
-  };
+  const newItem: RecurringTemplate = { ...input, id: crypto.randomUUID(), lastGenerated: null };
   items.push(newItem);
   await saveRecurring(userId, items);
-  
-  revalidateTag("recurring", "max"); // <-- Diperbaiki
+  revalidateTag("recurring", "max");
   return newItem;
 }
 
 export async function deleteRecurring(userId: string, id: string) {
   const items = await getRecurring(userId);
-  await saveRecurring(
-    userId,
-    items.filter((t) => t.id !== id)
-  );
-  
-  revalidateTag("recurring", "max"); // <-- Diperbaiki
+  await saveRecurring(userId, items.filter((t) => t.id !== id));
+  revalidateTag("recurring", "max");
 }
 
-export async function toggleRecurring(
-  userId: string,
-  id: string,
-  active: boolean
-) {
+export async function toggleRecurring(userId: string, id: string, active: boolean) {
   const items = await getRecurring(userId);
   const updated = items.map((t) => (t.id === id ? { ...t, active } : t));
   await saveRecurring(userId, updated);
-  
-  revalidateTag("recurring", "max"); // <-- Diperbaiki
+  revalidateTag("recurring", "max");
 }
 
 export async function processRecurring(userId: string): Promise<number> {
@@ -188,8 +157,8 @@ export async function processRecurring(userId: string): Promise<number> {
     saveRecurring(userId, allTemplates),
   ]);
 
-  revalidateTag("transactions", "max"); // <-- Diperbaiki
-  revalidateTag("recurring", "max"); // <-- Diperbaiki
+  revalidateTag("transactions", "max");
+  revalidateTag("recurring", "max");
 
   return generated;
 }
@@ -229,17 +198,75 @@ export async function addBudget(userId: string, input: BudgetInput) {
   };
   filtered.push(newItem);
   await saveBudgets(userId, filtered);
-  
-  revalidateTag("budgets", "max"); // <-- Diperbaiki
+  revalidateTag("budgets", "max");
   return newItem;
 }
 
 export async function deleteBudget(userId: string, id: string) {
   const items = await getBudgets(userId);
-  await saveBudgets(
-    userId,
-    items.filter((b) => b.id !== id)
-  );
-  
-  revalidateTag("budgets", "max"); // <-- Diperbaiki
+  await saveBudgets(userId, items.filter((b) => b.id !== id));
+  revalidateTag("budgets", "max");
+}
+
+// ============ GOALS (TARGET TABUNGAN) ============
+
+export const getGoals = unstable_cache(
+  async (userId: string): Promise<Goal[]> => {
+    try {
+      const data = await redis.get<Goal[]>(goalKey(userId));
+      return data || [];
+    } catch (err) {
+      console.error("Redis get goals error:", err);
+      return [];
+    }
+  },
+  ["goals-cache"],
+  { revalidate: 60, tags: ["goals"] }
+);
+
+export async function saveGoals(userId: string, items: Goal[]) {
+  try {
+    await redis.set(goalKey(userId), items);
+  } catch (err) {
+    console.error("Redis set goals error:", err);
+    throw err;
+  }
+}
+
+export async function addGoal(userId: string, input: GoalInput) {
+  const items = await getGoals(userId);
+  const newItem: Goal = {
+    ...input,
+    id: crypto.randomUUID(),
+    deposits: [],
+    createdAt: new Date().toISOString(),
+  };
+  items.push(newItem);
+  await saveGoals(userId, items);
+  revalidateTag("goals", "max");
+  return newItem;
+}
+
+export async function deleteGoal(userId: string, id: string) {
+  const items = await getGoals(userId);
+  await saveGoals(userId, items.filter((g) => g.id !== id));
+  revalidateTag("goals", "max");
+}
+
+export async function addGoalDeposit(userId: string, goalId: string, amount: number) {
+  const items = await getGoals(userId);
+  const updated = items.map((g) => {
+    if (g.id === goalId) {
+      return {
+        ...g,
+        deposits: [
+          ...g.deposits,
+          { id: crypto.randomUUID(), amount, date: new Date().toISOString().slice(0, 10) },
+        ],
+      };
+    }
+    return g;
+  });
+  await saveGoals(userId, updated);
+  revalidateTag("goals", "max");
 }

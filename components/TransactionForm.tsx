@@ -2,6 +2,7 @@
 
 import { toast } from "sonner";
 import { useRef } from "react";
+import { useFormStatus } from "react-dom";
 import AmountInput from "./AmountInput";
 import CategoryInput from "./CategoryInput";
 
@@ -9,6 +10,21 @@ type Props = {
   action: (formData: FormData) => Promise<void>;
   suggestions: string[];
 };
+
+// 1. Komponen Tombol Khusus (Biar bisa baca status form)
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2.5 rounded-lg transition shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
+    >
+      {pending ? "Menyimpan..." : "Simpan"}
+    </button>
+  );
+}
 
 export default function TransactionForm({ action, suggestions }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -92,12 +108,9 @@ export default function TransactionForm({ action, suggestions }: Props) {
         className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
       />
 
-      <button
-        type="submit"
-        className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2.5 rounded-lg transition shadow-sm"
-      >
-        Simpan
-      </button>
+      {/* 2. Panggil komponen tombolnya di sini */}
+      <SubmitButton />
+
       <p className="text-[10px] text-center text-gray-400 dark:text-gray-500">
         Tip: tekan{" "}
         <kbd className="px-1 rounded bg-gray-100 dark:bg-gray-800">Enter</kbd>{" "}
