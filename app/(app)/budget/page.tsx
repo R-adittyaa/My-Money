@@ -45,10 +45,14 @@ export default async function BudgetPage() {
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
+    
+    // Trik biar aman dari error tipe data form
     const limit = Number(formData.get("limit"));
-    const category = (formData.get("category") as string).trim();
-    if (!limit || limit <= 0) throw new Error("Invalid limit");
-    if (!category) throw new Error("Invalid category");
+    const category = String(formData.get("category") || "").trim(); 
+
+    if (!limit || limit <= 0) throw new Error("Nominal budget tidak valid");
+    if (!category) throw new Error("Silakan pilih kategori terlebih dahulu");
+
     await addBudget(session.user.id, { category, limit });
     revalidatePath("/budget");
     revalidatePath("/");

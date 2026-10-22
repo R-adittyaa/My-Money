@@ -12,6 +12,7 @@ import CategoryChart from "@/components/CategoryChart";
 import BudgetProgress from "@/components/BudgetProgress";
 import BudgetAlert from "@/components/BudgetAlert"; // <-- Import Banner
 import DeleteButton from "@/components/DeleteButton";
+import BalanceDisplay from "@/components/BalanceDisplay";
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
@@ -124,9 +125,7 @@ export default async function DashboardPage() {
           <p className="text-xs uppercase tracking-widest opacity-80">
             Saldo · {monthLabel}
           </p>
-          <p className="text-3xl sm:text-4xl font-bold mt-1 tabular-nums">
-            {formatRupiah(balance)}
-          </p>
+          <BalanceDisplay balance={balance} />
           <div className="grid grid-cols-2 gap-3 mt-5">
             <div className="bg-white/15 rounded-xl p-3 backdrop-blur-sm border border-white/10">
               <p className="text-[10px] opacity-80 uppercase tracking-wide">
