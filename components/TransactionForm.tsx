@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { useRef, useTransition } from "react";
+import { useRef, useTransition, useState } from "react";
 import { useFormStatus } from "react-dom";
 import AmountInput from "./AmountInput";
 import CategoryInput from "./CategoryInput";
@@ -28,15 +28,14 @@ function SubmitButton() {
 export default function TransactionForm({ action, suggestions }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
+  
+  // State buat nge-force reset form
+  const [formKey, setFormKey] = useState(0);
 
-  // Fungsi handleSubmit pake useTransition
   function onSubmit(formData: FormData) {
     const amount = Number(formData.get("amount"));
     const category = (formData.get("category") as string) || "";
     const type = formData.get("type") as string;
-
-    // Reset form DULUAN biar langsung kosong (Optimistic UI)
-    formRef.current?.reset();
 
     startTransition(async () => {
       try {
@@ -47,6 +46,10 @@ export default function TransactionForm({ action, suggestions }: Props) {
             : `Pengeluaran "${category}" tersimpan!`,
           { description: `Rp ${amount.toLocaleString("id-ID")}` }
         );
+        
+        // TRIK PAMUNGKAS: Ubah key biar React bikin form baru yang 100% kosong
+        setFormKey((prev) => prev + 1); 
+        
       } catch (err: any) {
         // Handle warning budget
         if (err.message && err.message.includes("Budget")) {
@@ -54,6 +57,8 @@ export default function TransactionForm({ action, suggestions }: Props) {
             description: "Transaksi tersimpan, tapi budget kritis.",
             duration: 5000,
           });
+          // Tetep reset form karena transaksi sebenarnya sukses disimpan
+          setFormKey((prev) => prev + 1); 
         } else {
           toast.error("Gagal menyimpan transaksi", {
             description: "Coba lagi sebentar lagi ya",
@@ -66,9 +71,11 @@ export default function TransactionForm({ action, suggestions }: Props) {
 
   return (
     <form
+      key={formKey} // <-- INI KUNCI UTAMANYA
       ref={formRef}
       action={onSubmit}
-      className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm space-y-3"
+      className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm space-y-3 transition-opacity"
+      style={{ opacity: isPending ? 0.7 : 1 }}
     >
       <div className="flex items-center gap-2">
         <span className="w-1 h-4 bg-red-600 rounded-full"></span>
@@ -98,8 +105,8 @@ export default function TransactionForm({ action, suggestions }: Props) {
         </label>
       </div>
 
-      <AmountInput name="amount" required />
-      <CategoryInput name="category" suggestions={suggestions} />
+      <AmountInput key={`amount-${formKey}`} name="amount" required />
+<CategoryInput key={`cat-${formKey}`} name="category" suggestions={suggestions} />
 
       <input
         name="notes"

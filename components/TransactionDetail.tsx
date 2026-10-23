@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { toast } from "sonner";
 import DeleteButton from "./DeleteButton";
 
 type Transaction = {
@@ -16,10 +17,19 @@ type Props = {
   transaction: Transaction;
   categoryIcon: string;
   onDelete: (formData: FormData) => Promise<void>;
+  onUpdate: (formData: FormData) => Promise<void>; // <-- Props baru
 };
 
-export default function TransactionDetail({ transaction: t, categoryIcon, onDelete }: Props) {
+export default function TransactionDetail({
+  transaction: t,
+  categoryIcon,
+  onDelete,
+  onUpdate,
+}: Props) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const formatRupiah = (n: number) => {
     const sign = n < 0 ? "-" : "";
@@ -35,9 +45,29 @@ export default function TransactionDetail({ transaction: t, categoryIcon, onDele
     });
   };
 
+  async function handleEditSubmit(formData: FormData) {
+    setIsPending(true);
+    try {
+      await onUpdate(formData);
+      toast.success("Transaksi berhasil diupdate");
+      setIsEditing(false);
+      setIsOpen(false); // Tutup modal setelah edit
+    } catch (err) {
+      toast.error("Gagal update transaksi");
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  // Fungsi buat close modal & reset state edit
+  function closeModal() {
+    setIsOpen(false);
+    setTimeout(() => setIsEditing(false), 300); // Delay dikit biar animasi smooth
+  }
+
   return (
     <>
-      {/* Trigger: Baris List Transaksi */}
+      {/* Baris List Transaksi */}
       <li
         onClick={() => setIsOpen(true)}
         className="p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -63,75 +93,148 @@ export default function TransactionDetail({ transaction: t, categoryIcon, onDele
         </p>
       </li>
 
-      {/* Modal / Bottom Sheet */}
+      {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          {/* Overlay */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setIsOpen(false)}
+            onClick={closeModal}
           />
 
-          {/* Konten Modal */}
-          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-200">
-            {/* Handle bar buat mobile */}
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-6 sm:hidden"></div>
 
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-3xl mb-3">
-                {categoryIcon}
-              </div>
-              <h3 className="text-lg font-bold">{t.category}</h3>
-              <p
-                className={`text-2xl font-bold mt-1 tabular-nums ${
-                  t.type === "income" ? "text-green-500" : "text-red-500"
-                }`}
-              >
-                {t.type === "income" ? "+" : "-"}
-                {formatRupiah(t.amount)}
-              </p>
-            </div>
+            {!isEditing ? (
+              // === MODE LIHAT DETAIL ===
+              <>
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-3xl mb-3">
+                    {categoryIcon}
+                  </div>
+                  <h3 className="text-lg font-bold">{t.category}</h3>
+                  <p
+                    className={`text-2xl font-bold mt-1 tabular-nums ${
+                      t.type === "income" ? "text-green-500" : "text-red-500"
+                    }`}
+                  >
+                    {t.type === "income" ? "+" : "-"}
+                    {formatRupiah(t.amount)}
+                  </p>
+                </div>
 
-            <div className="space-y-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 mb-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Tipe</span>
-                <span className="font-medium capitalize">
-                  {t.type === "income" ? "Pemasukan" : "Pengeluaran"}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Tanggal</span>
-                <span className="font-medium">{formatTanggal(t.date)}</span>
-              </div>
-              <div className="flex flex-col text-sm">
-                <span className="text-gray-500 dark:text-gray-400 mb-1">Catatan</span>
-                <span className="font-medium whitespace-pre-wrap leading-relaxed">
-                  {t.notes || "-"}
-                </span>
-              </div>
-            </div>
+                <div className="space-y-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 mb-6">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">Tipe</span>
+                    <span className="font-medium capitalize">
+                      {t.type === "income" ? "Pemasukan" : "Pengeluaran"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">Tanggal</span>
+                    <span className="font-medium">{formatTanggal(t.date)}</span>
+                  </div>
+                  <div className="flex flex-col text-sm">
+                    <span className="text-gray-500 dark:text-gray-400 mb-1">Catatan</span>
+                    <span className="font-medium whitespace-pre-wrap leading-relaxed">
+                      {t.notes || "-"}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Tombol Aksi */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsOpen(false)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-              >
-                Tutup
-              </button>
-              
-              {/* Tombol Hapus (pake komponen DeleteButton yang lama) */}
-              <div className="flex-1">
-                <DeleteButton
-                  id={t.id}
-                  category={t.category}
-                  action={async (fd) => {
-                    setIsOpen(false); // Tutup modal dulu
-                    await onDelete(fd); // Baru hapus
-                  }}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                  >
+                    Edit
+                  </button>
+                  <div className="flex-1">
+                    <DeleteButton
+                      id={t.id}
+                      category={t.category}
+                      action={async (fd) => {
+                        closeModal();
+                        await onDelete(fd);
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              // === MODE EDIT ===
+              <form ref={formRef} action={handleEditSubmit} className="space-y-4">
+                <input type="hidden" name="id" value={t.id} />
+                
+                <h3 className="font-bold text-lg mb-2">Edit Transaksi</h3>
+
+                {/* Input Tipe */}
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="cursor-pointer">
+                    <input type="radio" name="type" value="expense" defaultChecked={t.type === "expense"} className="peer sr-only" />
+                    <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-red-600 peer-checked:text-white peer-checked:border-red-600 transition">
+                      ↓ Keluar
+                    </div>
+                  </label>
+                  <label className="cursor-pointer">
+                    <input type="radio" name="type" value="income" defaultChecked={t.type === "income"} className="peer sr-only" />
+                    <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-600 transition">
+                      ↑ Masuk
+                    </div>
+                  </label>
+                </div>
+
+                <input
+                  name="date"
+                  type="date"
+                  defaultValue={t.date}
+                  required
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
                 />
-              </div>
-            </div>
+
+                <input
+                  name="amount"
+                  type="number"
+                  min="0"
+                  step="any"
+                  defaultValue={t.amount}
+                  required
+                  placeholder="Jumlah"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                />
+
+                <input
+                  name="category"
+                  defaultValue={t.category}
+                  required
+                  placeholder="Kategori"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                />
+
+                <input
+                  name="notes"
+                  defaultValue={t.notes}
+                  placeholder="Catatan (opsional)"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                />
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isPending}
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium text-sm transition disabled:opacity-50"
+                  >
+                    {isPending ? "Menyimpan..." : "Simpan"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

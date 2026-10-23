@@ -61,6 +61,20 @@ export async function deleteTransaction(userId: string, id: string) {
   revalidateTag("transactions", "max");
 }
 
+// Tambahkan di lib/storage.ts (di bawah deleteTransaction)
+export async function updateTransaction(
+  userId: string,
+  id: string,
+  input: TransactionInput
+) {
+  const items = await getTransactions(userId);
+  const updated = items.map((t) =>
+    t.id === id ? { ...t, ...input } : t
+  );
+  await saveTransactions(userId, updated);
+  revalidateTag("transactions", "max");
+}
+
 // ============ RECURRING ============
 
 export const getRecurring = unstable_cache(

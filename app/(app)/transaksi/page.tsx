@@ -3,14 +3,14 @@ import {
   addTransaction,
   deleteTransaction,
   processRecurring,
-  getBudgets, // <-- Import getBudgets buat cek notif
+  getBudgets,
+  updateTransaction, // <-- Pastiin ini ada
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import FilterBar from "@/components/FilterBar";
 import TransactionForm from "@/components/TransactionForm";
-import DeleteButton from "@/components/DeleteButton";
 import TransactionDetail from "@/components/TransactionDetail";
 
 function categoryIcon(category: string): string {
@@ -128,7 +128,7 @@ export default async function TransaksiPage({
     params.cat ||
     (params.sort && params.sort !== "newest");
 
-  // ==== SERVER ACTION: TAMBAH TRANSAKSI & CEK BUDGET ====
+  // ==== SERVER ACTION: TAMBAH TRANSAKSI ====
   async function handleAdd(formData: FormData) {
     "use server";
     const session = await auth();
@@ -180,11 +180,38 @@ export default async function TransaksiPage({
     }
   }
 
+  // ==== SERVER ACTION: HAPUS TRANSAKSI ====
   async function handleDelete(formData: FormData) {
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
     await deleteTransaction(session.user.id, formData.get("id") as string);
+    revalidatePath("/transaksi");
+    revalidatePath("/");
+  }
+
+  // ==== SERVER ACTION: EDIT TRANSAKSI ====
+  async function handleUpdate(formData: FormData) {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    
+    const id = formData.get("id") as string;
+    const amount = Number(formData.get("amount"));
+    const type = formData.get("type") as "income" | "expense";
+    const category = (formData.get("category") as string).trim();
+    const date = formData.get("date") as string;
+
+    if (!id || !amount || !category) throw new Error("Data tidak lengkap");
+
+    await updateTransaction(session.user.id, id, {
+      date,
+      amount,
+      type,
+      category,
+      notes: ((formData.get("notes") as string) || "").trim(),
+    });
+
     revalidatePath("/transaksi");
     revalidatePath("/");
   }
@@ -282,15 +309,16 @@ export default async function TransaksiPage({
               </div>
 
               <ul className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden shadow-sm">
-  {items.map((t) => (
-    <TransactionDetail
-      key={t.id}
-      transaction={t}
-      categoryIcon={categoryIcon(t.category)}
-      onDelete={handleDelete}
-    />
-  ))}
-</ul>
+                {items.map((t) => (
+                  <TransactionDetail
+                    key={t.id}
+                    transaction={t}
+                    categoryIcon={categoryIcon(t.category)}
+                    onDelete={handleDelete}
+                    onUpdate={handleUpdate} // <-- PASTIIN INI ADA
+                  />
+                ))}
+              </ul>
             </div>
           );
         })}
