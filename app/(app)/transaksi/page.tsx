@@ -4,7 +4,9 @@ import {
   deleteTransaction,
   processRecurring,
   getBudgets,
-  updateTransaction, // <-- Pastiin ini ada
+  updateTransaction,
+  getCategories,
+  saveCategories,
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -61,6 +63,7 @@ export default async function TransaksiPage({
   await processRecurring(userId);
 
   const all = await getTransactions(userId);
+  const dbCategories = await getCategories(userId);
 
   const availableMonths = Array.from(
     new Set(all.map((t) => t.date.slice(0, 7)))
@@ -73,10 +76,6 @@ export default async function TransaksiPage({
 
   const categories = Array.from(
     new Set(monthTransactions.map((t) => t.category))
-  ).sort();
-
-  const allCategories = Array.from(
-    new Set(all.map((t) => t.category))
   ).sort();
 
   let transactions = monthTransactions;
@@ -216,6 +215,31 @@ export default async function TransaksiPage({
     revalidatePath("/");
   }
 
+  // ==== SERVER ACTION: KATEGORI ====
+  async function handleAddCategory(name: string, type: "income" | "expense") {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    const cats = await getCategories(session.user.id);
+    await saveCategories(session.user.id, [
+      ...cats,
+      { id: crypto.randomUUID(), name, type },
+    ]);
+    revalidatePath("/transaksi");
+  }
+
+  async function handleDeleteCategory(id: string) {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    const cats = await getCategories(session.user.id);
+    await saveCategories(
+      session.user.id,
+      cats.filter((c) => c.id !== id)
+    );
+    revalidatePath("/transaksi");
+  }
+
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-4 max-w-4xl mx-auto lg:mx-0">
       <div className="flex items-center gap-2">
@@ -223,7 +247,12 @@ export default async function TransaksiPage({
         <h1 className="text-lg font-bold">Transaksi</h1>
       </div>
 
-      <TransactionForm action={handleAdd} suggestions={allCategories} />
+      <TransactionForm
+        action={handleAdd}
+        categories={dbCategories}
+        onAddCategory={handleAddCategory}
+        onDeleteCategory={handleDeleteCategory}
+      />
 
       {availableMonths.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
@@ -315,7 +344,7 @@ export default async function TransaksiPage({
                     transaction={t}
                     categoryIcon={categoryIcon(t.category)}
                     onDelete={handleDelete}
-                    onUpdate={handleUpdate} // <-- PASTIIN INI ADA
+                    onUpdate={handleUpdate}
                   />
                 ))}
               </ul>

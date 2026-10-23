@@ -65,3 +65,9 @@ export type GoalInput = {
   title: string;
   targetAmount: number;
 };
+
+export type Category = {
+  id: string;
+  name: string;
+  type: "income" | "expense" | "both";
+};

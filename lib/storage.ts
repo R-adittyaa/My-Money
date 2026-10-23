@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
 import { unstable_cache, revalidateTag } from "next/cache";
+import { Category } from "./types"; // Pastiin Category ada di types.ts
 import {
   Transaction,
   TransactionInput,
@@ -283,4 +284,38 @@ export async function addGoalDeposit(userId: string, goalId: string, amount: num
   });
   await saveGoals(userId, updated);
   revalidateTag("goals", "max");
+}
+
+// === KATEGORI ===
+const catKey = (userId: string) => `my-money:categories:${userId}`;
+
+export const getCategories = unstable_cache(
+  async (userId: string): Promise<Category[]> => {
+    try {
+      const data = await redis.get<Category[]>(catKey(userId));
+      // Default kategori kalo baru pertama kali pake
+      if (!data || data.length === 0) {
+        const defaults: Category[] = [
+          { id: crypto.randomUUID(), name: "Makan", type: "expense" },
+          { id: crypto.randomUUID(), name: "Transport", type: "expense" },
+          { id: crypto.randomUUID(), name: "Belanja", type: "expense" },
+          { id: crypto.randomUUID(), name: "Tagihan", type: "expense" },
+          { id: crypto.randomUUID(), name: "Hiburan", type: "expense" },
+          { id: crypto.randomUUID(), name: "Gaji", type: "income" },
+        ];
+        await redis.set(catKey(userId), defaults);
+        return defaults;
+      }
+      return data;
+    } catch (err) {
+      return [];
+    }
+  },
+  ["categories-cache"],
+  { revalidate: 60, tags: ["categories"] }
+);
+
+export async function saveCategories(userId: string, items: Category[]) {
+  await redis.set(catKey(userId), items);
+  revalidateTag("categories", "max");
 }
