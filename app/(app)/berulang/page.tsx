@@ -29,10 +29,6 @@ export default async function BerulangPage() {
     getTransactions(userId),
   ]);
 
-  const allCategories = Array.from(
-    new Set(all.map((t) => t.category))
-  ).sort();
-
   const activeCount = templates.filter((t) => t.active).length;
 
   async function handleAdd(formData: FormData) {
@@ -136,7 +132,6 @@ export default async function BerulangPage() {
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
         <RecurringManager
           templates={templates}
-          suggestions={allCategories}
           onAdd={handleAdd}
           onDelete={handleDelete}
           onToggle={handleToggle}
