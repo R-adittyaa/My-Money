@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import AmountInput from "./AmountInput";
-import CategoryInput from "./CategoryInput";
 
 type Template = {
   id: string;
@@ -19,7 +18,6 @@ type Template = {
 
 type Props = {
   templates: Template[];
-  suggestions: string[];
   onAdd: (formData: FormData) => Promise<void>;
   onDelete: (formData: FormData) => Promise<void>;
   onToggle: (formData: FormData) => Promise<void>;
@@ -27,7 +25,6 @@ type Props = {
 
 export default function RecurringManager({
   templates,
-  suggestions,
   onAdd,
   onDelete,
   onToggle,
@@ -75,7 +72,6 @@ export default function RecurringManager({
 
   return (
     <div className="space-y-3">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-1 h-4 bg-red-600 rounded-full"></span>
@@ -89,7 +85,6 @@ export default function RecurringManager({
         </button>
       </div>
 
-      {/* Form */}
       {showForm && (
         <form
           action={handleAdd}
@@ -97,24 +92,13 @@ export default function RecurringManager({
         >
           <div className="grid grid-cols-2 gap-2">
             <label className="cursor-pointer">
-              <input
-                type="radio"
-                name="type"
-                value="expense"
-                defaultChecked
-                className="peer sr-only"
-              />
+              <input type="radio" name="type" value="expense" defaultChecked className="peer sr-only" />
               <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-red-600 peer-checked:text-white peer-checked:border-red-600 transition">
                 ↓ Keluar
               </div>
             </label>
             <label className="cursor-pointer">
-              <input
-                type="radio"
-                name="type"
-                value="income"
-                className="peer sr-only"
-              />
+              <input type="radio" name="type" value="income" className="peer sr-only" />
               <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-600 transition">
                 ↑ Masuk
               </div>
@@ -122,7 +106,14 @@ export default function RecurringManager({
           </div>
 
           <AmountInput name="amount" required />
-          <CategoryInput name="category" suggestions={suggestions} />
+
+          {/* Ganti CategoryInput lama jadi input teks biasa */}
+          <input
+            name="category"
+            required
+            placeholder="Kategori (Misal: Gaji, Netflix)"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+          />
 
           <input
             name="notes"
@@ -154,7 +145,6 @@ export default function RecurringManager({
         </form>
       )}
 
-      {/* List */}
       {templates.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 py-6 text-center">
           <p className="text-2xl mb-1">🔁</p>
@@ -172,9 +162,7 @@ export default function RecurringManager({
               <button
                 onClick={() => handleToggle(tpl.id, !tpl.active, tpl.category)}
                 className={`w-8 h-4 rounded-full transition relative shrink-0 ${
-                  tpl.active
-                    ? "bg-green-500"
-                    : "bg-gray-300 dark:bg-gray-700"
+                  tpl.active ? "bg-green-500" : "bg-gray-300 dark:bg-gray-700"
                 }`}
                 aria-label="Toggle"
               >
@@ -190,13 +178,10 @@ export default function RecurringManager({
                   {tpl.category}
                   <span
                     className={`ml-1.5 ${
-                      tpl.type === "income"
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-red-600 dark:text-red-400"
+                      tpl.type === "income" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                     }`}
                   >
-                    {tpl.type === "income" ? "+" : "-"}Rp{" "}
-                    {tpl.amount.toLocaleString("id-ID")}
+                    {tpl.type === "income" ? "+" : "-"}Rp {tpl.amount.toLocaleString("id-ID")}
                   </span>
                 </p>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400">

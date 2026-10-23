@@ -3,6 +3,7 @@ import {
   deleteTransaction,
   processRecurring,
   getBudgets,
+  updateTransaction, // <-- Tambahan
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -99,6 +100,28 @@ export default async function DashboardPage() {
     revalidatePath("/");
   }
 
+  async function handleUpdate(formData: FormData) {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    const id = formData.get("id") as string;
+    const amount = Number(formData.get("amount"));
+    const type = formData.get("type") as "income" | "expense";
+    const category = (formData.get("category") as string).trim();
+    const date = formData.get("date") as string;
+
+    if (!id || !amount || !category) throw new Error("Data tidak lengkap");
+
+    await updateTransaction(session.user.id, id, {
+      date,
+      amount,
+      type,
+      category,
+      notes: ((formData.get("notes") as string) || "").trim(),
+    });
+    revalidatePath("/");
+  }
+
   const monthLabel = now.toLocaleDateString("id-ID", {
     month: "long",
     year: "numeric",
@@ -106,10 +129,8 @@ export default async function DashboardPage() {
 
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0">
-      {/* Banner Peringatan Budget */}
       {budgetStatuses.length > 0 && <BudgetAlert items={budgetStatuses} />}
 
-      {/* HERO SALDO */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-5 sm:p-6 text-white shadow-lg">
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute -bottom-16 -left-16 w-52 h-52 rounded-full bg-black/10 blur-3xl" />
@@ -126,7 +147,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* STATISTIK BAWAH SALDO */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 shadow-sm">
           <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -182,7 +202,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* TRANSAKSI TERBARU */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -218,6 +237,7 @@ export default async function DashboardPage() {
                 transaction={t}
                 categoryIcon={categoryIcon(t.category)}
                 onDelete={handleDelete}
+                onUpdate={handleUpdate} // <-- Tambahan
               />
             ))}
           </ul>
