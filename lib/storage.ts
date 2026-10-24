@@ -319,3 +319,14 @@ export async function saveCategories(userId: string, items: Category[]) {
   await redis.set(catKey(userId), items);
   revalidateTag("categories", "max");
 }
+
+export async function updateCategory(
+  userId: string,
+  id: string,
+  name: string,
+  type: "income" | "expense" | "both"
+) {
+  const cats = await getCategories(userId);
+  const updated = cats.map((c) => (c.id === id ? { ...c, name, type } : c));
+  await saveCategories(userId, updated);
+}

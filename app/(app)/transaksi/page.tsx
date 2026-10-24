@@ -7,6 +7,7 @@ import {
   updateTransaction,
   getCategories,
   saveCategories,
+  updateCategory, // <-- TAMBAHAN
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -228,6 +229,14 @@ export default async function TransaksiPage({
     revalidatePath("/transaksi");
   }
 
+  async function handleEditCategory(id: string, name: string, type: "income" | "expense") {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    await updateCategory(session.user.id, id, name, type);
+    revalidatePath("/transaksi");
+  }
+
   async function handleDeleteCategory(id: string) {
     "use server";
     const session = await auth();
@@ -251,6 +260,7 @@ export default async function TransaksiPage({
         action={handleAdd}
         categories={dbCategories}
         onAddCategory={handleAddCategory}
+        onEditCategory={handleEditCategory}
         onDeleteCategory={handleDeleteCategory}
       />
 

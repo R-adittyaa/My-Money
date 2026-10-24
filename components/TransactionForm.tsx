@@ -12,19 +12,25 @@ type Props = {
   action: (formData: FormData) => Promise<void>;
   categories: Category[];
   onAddCategory: (name: string, type: "income" | "expense") => Promise<void>;
+  onEditCategory: (id: string, name: string, type: "income" | "expense") => Promise<void>; // <-- Baru
   onDeleteCategory: (id: string) => Promise<void>;
 };
 
-function SubmitButton() {
+// Tombol submit dengan validasi kategori
+function SubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2.5 rounded-lg transition shadow-sm disabled:opacity-70 flex justify-center items-center">
-      {pending ? "Menyimpan..." : "Simpan"}
+    <button 
+      type="submit" 
+      disabled={pending || disabled} 
+      className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2.5 rounded-lg transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
+    >
+      {pending ? "Menyimpan..." : "Simpan Transaksi"}
     </button>
   );
 }
 
-export default function TransactionForm({ action, categories, onAddCategory, onDeleteCategory }: Props) {
+export default function TransactionForm({ action, categories, onAddCategory, onEditCategory, onDeleteCategory }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
@@ -78,9 +84,9 @@ export default function TransactionForm({ action, categories, onAddCategory, onD
 
         <AmountInput name="amount" required />
 
-        {/* TOMBOL PILIH KATEGORI (Panggil Modal) */}
+        {/* INPUT KATEGORI (WAJIB PILIH) */}
         <div>
-          <input type="hidden" name="category" value={selectedCategory} required />
+          <input type="hidden" name="category" value={selectedCategory} />
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
@@ -97,16 +103,17 @@ export default function TransactionForm({ action, categories, onAddCategory, onD
 
         <input name="notes" placeholder="Catatan (opsional)" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
 
-        <SubmitButton />
+        {/* Tombol simpan otomatis mati kalau selectedCategory kosong */}
+        <SubmitButton disabled={!selectedCategory} />
       </form>
 
-      {/* MODAL KATEGORI */}
       <CategoryModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         categories={categories}
         onSelect={(name) => setSelectedCategory(name)}
         onAdd={onAddCategory}
+        onEdit={onEditCategory}
         onDelete={onDeleteCategory}
       />
     </>
