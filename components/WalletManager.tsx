@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import AmountInput from "./AmountInput";
 
@@ -35,7 +36,7 @@ export default function WalletManager({ wallets, onAdd, onUpdate, onDelete }: Pr
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Hapus dompet "${name}"? Transaksi lama gak akan ilang, tapi saldo dompet ini akan dihapus dari sistem.`)) return;
+    if (!confirm(`Hapus dompet "${name}"?`)) return;
     const fd = new FormData(); fd.set("id", id);
     try {
       await onDelete(fd);
@@ -52,7 +53,7 @@ export default function WalletManager({ wallets, onAdd, onUpdate, onDelete }: Pr
       </div>
 
       {mode === "add" && (
-        <form onSubmit={(e) => handleSubmit(e, false)} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+        <form onSubmit={(e) => handleSubmit(e, false)} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3 animate-in fade-in slide-in-from-top-4">
           <h3 className="font-bold text-sm">Tambah Dompet</h3>
           <input name="name" required placeholder="Nama Dompet (Misal: Gopay, BCA)" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
           <div>
@@ -67,8 +68,16 @@ export default function WalletManager({ wallets, onAdd, onUpdate, onDelete }: Pr
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {wallets.map((w) => (
-          <div key={w.id} className="relative rounded-2xl bg-gradient-to-br from-gray-900 to-black p-5 text-white shadow-lg overflow-hidden group">
+        {wallets.map((w, i) => (
+          <motion.div 
+            key={w.id} 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: i * 0.1 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="relative rounded-2xl bg-gradient-to-br from-gray-900 to-black p-5 text-white shadow-lg overflow-hidden group"
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl"></div>
             
             {mode === "edit" && editId === w.id ? (
@@ -104,7 +113,7 @@ export default function WalletManager({ wallets, onAdd, onUpdate, onDelete }: Pr
                 <p className="text-[10px] text-white/40 mt-2">Saldo Awal: Rp {w.initialBalance.toLocaleString("id-ID")}</p>
               </div>
             )}
-          </div>
+          </motion.div>
         ))}
       </div>
 

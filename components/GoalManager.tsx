@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion"; // <-- Import
 import { toast } from "sonner";
 import AmountInput from "./AmountInput";
 
@@ -67,38 +68,23 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
 
   return (
     <div className="space-y-5">
-      {/* HEADER & TOMBOL TAMBAH */}
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-          Daftar Target
-        </h2>
-        <button 
-          onClick={() => setShowForm(!showForm)} 
-          className="text-xs font-medium bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-        >
+        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Daftar Target</h2>
+        <button onClick={() => setShowForm(!showForm)} className="text-xs font-medium bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
           {showForm ? "Batal" : "+ Target Baru"}
         </button>
       </div>
 
-      {/* FORM TAMBAH */}
       {showForm && (
         <form action={handleAdd} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3 animate-in fade-in slide-in-from-top-4">
-          <input 
-            name="title" 
-            required 
-            placeholder="Mau nabung buat apa? (Misal: Beli Laptop)" 
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" 
-          />
+          <input name="title" required placeholder="Mau nabung buat apa? (Misal: Beli Laptop)" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
           <AmountInput name="targetAmount" required />
-          <button type="submit" className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-2.5 rounded-lg text-sm transition">
-            Simpan Target
-          </button>
+          <button type="submit" className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-2.5 rounded-lg text-sm transition">Simpan Target</button>
         </form>
       )}
 
-      {/* GRID KARTU TARGET */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {goals.map((goal) => {
+        {goals.map((goal, index) => {
           const totalDeposit = goal.deposits.reduce((sum, d) => sum + d.amount, 0);
           const totalWithdraw = (goal.withdrawals || []).reduce((sum, w) => sum + w.amount, 0);
           const collected = totalDeposit - totalWithdraw;
@@ -112,7 +98,15 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
           ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return (
-            <div key={goal.id} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-sm relative overflow-hidden flex flex-col">
+            // ANIMASI DI SINI
+            <motion.div 
+              key={goal.id} 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }} // Munculnya bergantian
+              whileHover={{ y: -4 }} // Efek naik pas di hover
+              className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-sm relative overflow-hidden flex flex-col"
+            >
               {isDone && <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">TERCAPAI 🎉</div>}
               
               <div className="flex justify-between items-start mb-4">
@@ -123,7 +117,6 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                 <button onClick={() => handleDelete(goal.id)} className="text-gray-300 hover:text-red-500 p-1">✕</button>
               </div>
 
-              {/* Angka Terkumpul */}
               <div className="mb-4">
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
                   Rp {collected.toLocaleString("id-ID")}
@@ -134,12 +127,15 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                 </div>
               </div>
 
-              {/* Progress Bar */}
               <div className="h-2.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden mb-5">
-                <div className={`h-full rounded-full transition-all duration-500 ${isDone ? "bg-green-500" : "bg-red-500"}`} style={{ width: `${pct}%` }} />
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className={`h-full rounded-full ${isDone ? "bg-green-500" : "bg-red-500"}`} 
+                />
               </div>
 
-              {/* Aksi */}
               <div className="mt-auto">
                 {actionId === goal.id ? (
                   <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in-95">
@@ -192,7 +188,7 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>

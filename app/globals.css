@@ -32,24 +32,15 @@ select option {
   background: rgba(255, 255, 255, 0.15);
 }
 
-@import "tailwindcss";
+/* =========================================
+   ANIMASI GLOBAL
+   ========================================= */
 
-/* Sonner toast animation */
-@keyframes slide-in {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fadeIn {
+/* 1. Fade In buat halaman (main) */
+@keyframes fadeInPage {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -58,23 +49,52 @@ select option {
 }
 
 main {
-  animation: fadeIn 0.3s ease-out forwards;
+  animation: fadeInPage 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* 2. Efek Tekan Tombol (Biar kerasa kayak native app) */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active, 
+a:active {
+  transform: scale(0.96);
+  transition: transform 0.1s ease;
+}
+
+/* 3. Animasi Slide dari Bawah (Buat Bottom Nav / Modal) */
 @keyframes slideInBottom {
   from {
     transform: translateY(100%);
+    opacity: 0;
   }
   to {
     transform: translateY(0);
+    opacity: 1;
   }
 }
 
 .animate-in {
-  animation: slideInFromBottom 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideInBottom 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .slide-in-from-bottom-full {
   animation-name: slideInBottom;
 }
 
+/* 4. Animasi Zoom In (Buat Modal Center) */
+@keyframes zoomInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.zoom-in-95 {
+  animation: zoomInModal 0.2s ease-out forwards;
+}
