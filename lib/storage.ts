@@ -336,3 +336,8 @@ export async function updateWallet(userId: string, id: string, name: string, ini
   const updated = wallets.map((w) => (w.id === id ? { ...w, name, initialBalance } : w));
   await saveWallets(userId, updated);
 }
+
+export async function deleteWallet(userId: string, id: string) {
+  const wallets = await getWallets(userId);
+  await saveWallets(userId, wallets.filter((w) => w.id !== id));
+}

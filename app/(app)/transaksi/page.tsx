@@ -143,7 +143,6 @@ export default async function TransaksiPage({
     const category = (formData.get("category") as string).trim();
     const wallet = (formData.get("wallet") as string).trim();
     
-    // Gabungin Tanggal & Jam
     const dateInput = formData.get("date") as string;
     const timeInput = formData.get("time") as string;
     const date = `${dateInput}T${timeInput}:00.000Z`;
@@ -203,7 +202,6 @@ export default async function TransaksiPage({
     const category = (formData.get("category") as string).trim();
     const wallet = (formData.get("wallet") as string).trim();
     
-    // Gabungin Tanggal & Jam
     const dateInput = formData.get("date") as string;
     const timeInput = formData.get("time") as string;
     const date = `${dateInput}T${timeInput}:00.000Z`;
@@ -251,7 +249,8 @@ export default async function TransaksiPage({
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
     const wallets = await getWallets(session.user.id);
-    await saveWallets(session.user.id, [...wallets, { id: crypto.randomUUID(), name }]);
+    // Default saldo 0 buat nambah dompet dari form transaksi
+    await saveWallets(session.user.id, [...wallets, { id: crypto.randomUUID(), name, initialBalance: 0 }]);
     revalidatePath("/transaksi");
   }
 
@@ -259,7 +258,10 @@ export default async function TransaksiPage({
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
-    await updateWallet(session.user.id, id, name);
+    const wallets = await getWallets(session.user.id);
+    const target = wallets.find(w => w.id === id);
+    // Panggil dengan 4 argumen (id, name, initialBalance)
+    await updateWallet(session.user.id, id, name, target?.initialBalance || 0);
     revalidatePath("/transaksi");
   }
 

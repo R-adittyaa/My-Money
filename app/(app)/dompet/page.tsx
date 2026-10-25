@@ -19,8 +19,9 @@ export default async function DompetPage() {
     const txs = transactions.filter((t) => t.wallet === w.name);
     const income = txs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
     const expense = txs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-    const currentBalance = w.initialBalance + income - expense;
-    return { ...w, currentBalance };
+    const initBal = Number(w.initialBalance) || 0; // Fallback kalau data lama
+    const currentBalance = initBal + income - expense;
+    return { ...w, initialBalance: initBal, currentBalance };
   });
 
   const totalBalance = walletBalances.reduce((sum, w) => sum + w.currentBalance, 0);
@@ -55,8 +56,7 @@ export default async function DompetPage() {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
     const id = formData.get("id") as string;
-    const current = await getWallets(session.user.id);
-    await saveWallets(session.user.id, current.filter((w) => w.id !== id));
+    await deleteWallet(session.user.id, id);
     revalidatePath("/dompet");
     revalidatePath("/transaksi");
   }
