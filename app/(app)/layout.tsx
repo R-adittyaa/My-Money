@@ -1,6 +1,7 @@
 import AppHeader from "@/components/AppHeader";
 import NavSidebar from "@/components/NavSidebar";
 import NavBottom from "@/components/NavBottom";
+import QuickAddButton from "@/components/QuickAddButton";
 
 export default function AppLayout({
   children,
@@ -12,9 +13,12 @@ export default function AppLayout({
       <AppHeader />
       <div className="flex">
         <NavSidebar />
-        <div className="flex-1 min-w-0 pb-20 lg:pb-0">{children}</div>
+        <div className="flex-1 min-w-0 pb-20 lg:pb-0">
+          {children}
+        </div>
       </div>
       <NavBottom />
+      <QuickAddButton />
     </div>
   );
 }

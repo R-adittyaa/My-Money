@@ -1,17 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 type Props = {
   name: string;
   defaultValue?: number;
   required?: boolean;
+  autoFocus?: boolean; // <-- Tambahan
 };
 
-export default function AmountInput({ name, defaultValue, required }: Props) {
+export default function AmountInput({ name, defaultValue, required, autoFocus }: Props) {
   const [display, setDisplay] = useState(
     defaultValue ? defaultValue.toLocaleString("id-ID") : ""
   );
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Efek auto-focus pas modal kebuka
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      // Kasih delay dikit biar animasi modalnya kelar dulu
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [autoFocus]);
 
   const rawValue = display.replace(/\./g, "").replace(/\D/g, "");
 
@@ -28,6 +38,7 @@ export default function AmountInput({ name, defaultValue, required }: Props) {
         Rp
       </span>
       <input
+        ref={inputRef}
         type="text"
         inputMode="numeric"
         value={display}

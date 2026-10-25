@@ -152,7 +152,7 @@ export default function TransactionForm({
           <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
             Nominal <span className="text-red-500">*</span>
           </label>
-          <AmountInput name="amount" required />
+<AmountInput name="amount" required autoFocus />
         </div>
 
         <div>
