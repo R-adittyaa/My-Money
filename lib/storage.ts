@@ -1,16 +1,10 @@
 import { Redis } from "@upstash/redis";
 import { unstable_cache, revalidateTag } from "next/cache";
 import {
-  Transaction,
-  TransactionInput,
-  RecurringTemplate,
-  RecurringTemplateInput,
-  Budget,
-  BudgetInput,
-  Category,
-  Goal,
-  GoalInput,
-  Wallet,
+  Transaction, TransactionInput,
+  RecurringTemplate, RecurringTemplateInput,
+  Budget, BudgetInput,
+  Category, Goal, GoalInput, Wallet, Debt, DebtInput
 } from "./types";
 
 const redis = new Redis({
@@ -24,6 +18,7 @@ const budgetKey = (userId: string) => `my-money:budgets:${userId}`;
 const catKey = (userId: string) => `my-money:categories:${userId}`;
 const goalKey = (userId: string) => `my-money:goals:${userId}`;
 const walletKey = (userId: string) => `my-money:wallets:${userId}`;
+const debtKey = (userId: string) => `my-money:debts:${userId}`;
 
 // ============ TRANSACTIONS ============
 
@@ -136,7 +131,7 @@ export async function processRecurring(userId: string): Promise<number> {
       type: tpl.type,
       category: tpl.category,
       notes: tpl.notes || "(berulang)",
-      wallet: "Tunai", // fallback
+      wallet: "Tunai",
     });
     updatedTemplates.push({ ...tpl, lastGenerated: currentMonth });
     generated++;
@@ -340,4 +335,62 @@ export async function updateWallet(userId: string, id: string, name: string, ini
 export async function deleteWallet(userId: string, id: string) {
   const wallets = await getWallets(userId);
   await saveWallets(userId, wallets.filter((w) => w.id !== id));
+}
+
+// ============ DEBTS (HUTANG & PIUTANG) ============
+
+export const getDebts = unstable_cache(
+  async (userId: string): Promise<Debt[]> => {
+    try {
+      const data = await redis.get<Debt[]>(debtKey(userId));
+      return data || [];
+    } catch (err) {
+      return [];
+    }
+  },
+  ["debts-cache"],
+  { revalidate: 60, tags: ["debts"] }
+);
+
+export async function saveDebts(userId: string, items: Debt[]) {
+  await redis.set(debtKey(userId), items);
+  revalidateTag("debts", "max");
+}
+
+export async function addDebt(userId: string, input: DebtInput) {
+  const items = await getDebts(userId);
+  const newItem: Debt = {
+    ...input,
+    id: crypto.randomUUID(),
+    isPaid: false,
+    createdAt: new Date().toISOString(),
+  };
+  items.unshift(newItem);
+  await saveDebts(userId, items);
+  return newItem;
+}
+
+export async function deleteDebt(userId: string, id: string) {
+  const items = await getDebts(userId);
+  await saveDebts(userId, items.filter((d) => d.id !== id));
+}
+
+export async function settleDebt(userId: string, id: string, walletName: string) {
+  const items = await getDebts(userId);
+  const debt = items.find((d) => d.id === id);
+  if (!debt || debt.isPaid) throw new Error("Hutang tidak ditemukan atau sudah lunas");
+
+  const updated = items.map((d) => (d.id === id ? { ...d, isPaid: true } : d));
+  await saveDebts(userId, updated);
+
+  const txType = debt.type === "debt" ? "expense" : "income";
+  
+  await addTransaction(userId, {
+    date: new Date().toISOString(),
+    amount: debt.amount,
+    type: txType,
+    category: debt.type === "debt" ? "Bayar Utang" : "Terima Piutang",
+    wallet: walletName,
+    notes: `Pelunasan ${debt.type === "debt" ? "hutang ke" : "piutang dari"} ${debt.personName}`,
+  });
 }

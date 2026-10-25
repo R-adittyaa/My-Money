@@ -3,7 +3,7 @@ export type TransactionType = "income" | "expense";
 export type Wallet = {
   id: string;
   name: string;
-   initialBalance: number; 
+  initialBalance: number;
 };
 
 export type Transaction = {
@@ -13,7 +13,7 @@ export type Transaction = {
   type: TransactionType;
   category: string;
   notes: string;
-  wallet: string; // <-- Tambahan Baru
+  wallet: string;
 };
 
 export type TransactionInput = Omit<Transaction, "id">;
@@ -83,3 +83,19 @@ export type GoalInput = {
   title: string;
   targetAmount: number;
 };
+
+// === HUTANG & PIUTANG ===
+export type DebtType = "debt" | "loan";
+
+export type Debt = {
+  id: string;
+  personName: string;
+  type: DebtType;
+  amount: number;
+  dueDate: string;
+  isPaid: boolean;
+  notes: string;
+  createdAt: string;
+};
+
+export type DebtInput = Omit<Debt, "id" | "isPaid" | "createdAt">;
