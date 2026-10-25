@@ -1,6 +1,5 @@
 import { Redis } from "@upstash/redis";
 import { unstable_cache, revalidateTag } from "next/cache";
-import { Category } from "./types"; // Pastiin Category ada di types.ts
 import {
   Transaction,
   TransactionInput,
@@ -8,6 +7,7 @@ import {
   RecurringTemplateInput,
   Budget,
   BudgetInput,
+  Category,
   Goal,
   GoalInput,
 } from "./types";
@@ -20,6 +20,7 @@ const redis = new Redis({
 const txKey = (userId: string) => `my-money:transactions:${userId}`;
 const recKey = (userId: string) => `my-money:recurring:${userId}`;
 const budgetKey = (userId: string) => `my-money:budgets:${userId}`;
+const catKey = (userId: string) => `my-money:categories:${userId}`;
 const goalKey = (userId: string) => `my-money:goals:${userId}`;
 
 // ============ TRANSACTIONS ============
@@ -56,23 +57,16 @@ export async function addTransaction(userId: string, input: TransactionInput) {
   return newItem;
 }
 
-export async function deleteTransaction(userId: string, id: string) {
+export async function updateTransaction(userId: string, id: string, input: TransactionInput) {
   const items = await getTransactions(userId);
-  await saveTransactions(userId, items.filter((t) => t.id !== id));
+  const updated = items.map((t) => (t.id === id ? { ...t, ...input } : t));
+  await saveTransactions(userId, updated);
   revalidateTag("transactions", "max");
 }
 
-// Tambahkan di lib/storage.ts (di bawah deleteTransaction)
-export async function updateTransaction(
-  userId: string,
-  id: string,
-  input: TransactionInput
-) {
+export async function deleteTransaction(userId: string, id: string) {
   const items = await getTransactions(userId);
-  const updated = items.map((t) =>
-    t.id === id ? { ...t, ...input } : t
-  );
-  await saveTransactions(userId, updated);
+  await saveTransactions(userId, items.filter((t) => t.id !== id));
   revalidateTag("transactions", "max");
 }
 
@@ -84,7 +78,6 @@ export const getRecurring = unstable_cache(
       const data = await redis.get<RecurringTemplate[]>(recKey(userId));
       return data || [];
     } catch (err) {
-      console.error("Redis get recurring error:", err);
       return [];
     }
   },
@@ -93,12 +86,7 @@ export const getRecurring = unstable_cache(
 );
 
 export async function saveRecurring(userId: string, items: RecurringTemplate[]) {
-  try {
-    await redis.set(recKey(userId), items);
-  } catch (err) {
-    console.error("Redis set recurring error:", err);
-    throw err;
-  }
+  await redis.set(recKey(userId), items);
 }
 
 export async function addRecurring(userId: string, input: RecurringTemplateInput) {
@@ -174,7 +162,6 @@ export async function processRecurring(userId: string): Promise<number> {
 
   revalidateTag("transactions", "max");
   revalidateTag("recurring", "max");
-
   return generated;
 }
 
@@ -186,7 +173,6 @@ export const getBudgets = unstable_cache(
       const data = await redis.get<Budget[]>(budgetKey(userId));
       return data || [];
     } catch (err) {
-      console.error("Redis get budgets error:", err);
       return [];
     }
   },
@@ -195,22 +181,13 @@ export const getBudgets = unstable_cache(
 );
 
 export async function saveBudgets(userId: string, items: Budget[]) {
-  try {
-    await redis.set(budgetKey(userId), items);
-  } catch (err) {
-    console.error("Redis set budgets error:", err);
-    throw err;
-  }
+  await redis.set(budgetKey(userId), items);
 }
 
 export async function addBudget(userId: string, input: BudgetInput) {
   const items = await getBudgets(userId);
   const filtered = items.filter((b) => b.category !== input.category);
-  const newItem: Budget = {
-    ...input,
-    id: crypto.randomUUID(),
-    createdAt: new Date().toISOString(),
-  };
+  const newItem: Budget = { ...input, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
   filtered.push(newItem);
   await saveBudgets(userId, filtered);
   revalidateTag("budgets", "max");
@@ -223,77 +200,12 @@ export async function deleteBudget(userId: string, id: string) {
   revalidateTag("budgets", "max");
 }
 
-// ============ GOALS (TARGET TABUNGAN) ============
-
-export const getGoals = unstable_cache(
-  async (userId: string): Promise<Goal[]> => {
-    try {
-      const data = await redis.get<Goal[]>(goalKey(userId));
-      return data || [];
-    } catch (err) {
-      console.error("Redis get goals error:", err);
-      return [];
-    }
-  },
-  ["goals-cache"],
-  { revalidate: 60, tags: ["goals"] }
-);
-
-export async function saveGoals(userId: string, items: Goal[]) {
-  try {
-    await redis.set(goalKey(userId), items);
-  } catch (err) {
-    console.error("Redis set goals error:", err);
-    throw err;
-  }
-}
-
-export async function addGoal(userId: string, input: GoalInput) {
-  const items = await getGoals(userId);
-  const newItem: Goal = {
-    ...input,
-    id: crypto.randomUUID(),
-    deposits: [],
-    createdAt: new Date().toISOString(),
-  };
-  items.push(newItem);
-  await saveGoals(userId, items);
-  revalidateTag("goals", "max");
-  return newItem;
-}
-
-export async function deleteGoal(userId: string, id: string) {
-  const items = await getGoals(userId);
-  await saveGoals(userId, items.filter((g) => g.id !== id));
-  revalidateTag("goals", "max");
-}
-
-export async function addGoalDeposit(userId: string, goalId: string, amount: number) {
-  const items = await getGoals(userId);
-  const updated = items.map((g) => {
-    if (g.id === goalId) {
-      return {
-        ...g,
-        deposits: [
-          ...g.deposits,
-          { id: crypto.randomUUID(), amount, date: new Date().toISOString().slice(0, 10) },
-        ],
-      };
-    }
-    return g;
-  });
-  await saveGoals(userId, updated);
-  revalidateTag("goals", "max");
-}
-
-// === KATEGORI ===
-const catKey = (userId: string) => `my-money:categories:${userId}`;
+// ============ CATEGORIES ============
 
 export const getCategories = unstable_cache(
   async (userId: string): Promise<Category[]> => {
     try {
       const data = await redis.get<Category[]>(catKey(userId));
-      // Default kategori kalo baru pertama kali pake
       if (!data || data.length === 0) {
         const defaults: Category[] = [
           { id: crypto.randomUUID(), name: "Makan", type: "expense" },
@@ -320,13 +232,84 @@ export async function saveCategories(userId: string, items: Category[]) {
   revalidateTag("categories", "max");
 }
 
-export async function updateCategory(
-  userId: string,
-  id: string,
-  name: string,
-  type: "income" | "expense" | "both"
-) {
+export async function updateCategory(userId: string, id: string, name: string, type: "income" | "expense" | "both") {
   const cats = await getCategories(userId);
   const updated = cats.map((c) => (c.id === id ? { ...c, name, type } : c));
   await saveCategories(userId, updated);
+}
+
+// ============ GOALS (TARGET TABUNGAN) ============
+
+export const getGoals = unstable_cache(
+  async (userId: string): Promise<Goal[]> => {
+    try {
+      const data = await redis.get<Goal[]>(goalKey(userId));
+      return data || [];
+    } catch (err) {
+      return [];
+    }
+  },
+  ["goals-cache"],
+  { revalidate: 60, tags: ["goals"] }
+);
+
+export async function saveGoals(userId: string, items: Goal[]) {
+  await redis.set(goalKey(userId), items);
+}
+
+export async function addGoal(userId: string, input: GoalInput) {
+  const items = await getGoals(userId);
+  const newItem: Goal = {
+    ...input,
+    id: crypto.randomUUID(),
+    deposits: [],
+    withdrawals: [], // <-- Init array kosong
+    createdAt: new Date().toISOString(),
+  };
+  items.push(newItem);
+  await saveGoals(userId, items);
+  revalidateTag("goals", "max");
+  return newItem;
+}
+
+export async function deleteGoal(userId: string, id: string) {
+  const items = await getGoals(userId);
+  await saveGoals(userId, items.filter((g) => g.id !== id));
+  revalidateTag("goals", "max");
+}
+
+export async function addGoalDeposit(userId: string, goalId: string, amount: number) {
+  const items = await getGoals(userId);
+  const updated = items.map((g) => {
+    if (g.id === goalId) {
+      return {
+        ...g,
+        deposits: [
+          ...g.deposits,
+          { id: crypto.randomUUID(), amount, date: new Date().toISOString() }, // <-- Tambah Jam
+        ],
+      };
+    }
+    return g;
+  });
+  await saveGoals(userId, updated);
+  revalidateTag("goals", "max");
+}
+
+export async function withdrawGoal(userId: string, goalId: string, amount: number) {
+  const items = await getGoals(userId);
+  const updated = items.map((g) => {
+    if (g.id === goalId) {
+      return {
+        ...g,
+        withdrawals: [
+          ...(g.withdrawals || []),
+          { id: crypto.randomUUID(), amount, date: new Date().toISOString() },
+        ],
+      };
+    }
+    return g;
+  });
+  await saveGoals(userId, updated);
+  revalidateTag("goals", "max");
 }

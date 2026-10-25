@@ -9,6 +9,7 @@ type Goal = {
   title: string;
   targetAmount: number;
   deposits: { id: string; amount: number; date: string }[];
+  withdrawals?: { id: string; amount: number; date: string }[];
 };
 
 type Props = {
@@ -16,140 +17,191 @@ type Props = {
   onAdd: (formData: FormData) => Promise<void>;
   onDelete: (formData: FormData) => Promise<void>;
   onDeposit: (formData: FormData) => Promise<void>;
+  onWithdraw: (formData: FormData) => Promise<void>;
 };
 
-export default function GoalManager({ goals, onAdd, onDelete, onDeposit }: Props) {
+export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithdraw }: Props) {
   const [showForm, setShowForm] = useState(false);
-  const [depositId, setDepositId] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<"deposit" | "withdraw" | "history" | null>(null);
 
   async function handleAdd(formData: FormData) {
     try {
       await onAdd(formData);
       toast.success("Target ditambahkan");
       setShowForm(false);
-    } catch (err) {
-      toast.error("Gagal tambah target");
-    }
+    } catch { toast.error("Gagal tambah target"); }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Hapus target ini? Semua riwayat nabung akan hilang.")) return;
-    const fd = new FormData();
-    fd.set("id", id);
+    const fd = new FormData(); fd.set("id", id);
     try {
       await onDelete(fd);
       toast.info("Target dihapus");
-    } catch (err) {
-      toast.error("Gagal hapus target");
+    } catch { toast.error("Gagal hapus target"); }
+  }
+
+  async function handleActionSubmit(e: React.FormEvent<HTMLFormElement>, type: "deposit" | "withdraw") {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    try {
+      if (type === "deposit") await onDeposit(fd);
+      else await onWithdraw(fd);
+      
+      toast.success(type === "deposit" ? "Berhasil menabung!" : "Berhasil ditarik!");
+      setActionId(null);
+      setActionType(null);
+    } catch (err: any) {
+      toast.error(err.message || "Gagal memproses");
     }
   }
 
-  async function handleDeposit(formData: FormData) {
-    try {
-      await onDeposit(formData);
-      toast.success("Berhasil menabung!");
-      setDepositId(null);
-    } catch (err) {
-      toast.error("Gagal menabung");
-    }
+  function formatTanggalJam(isoString: string) {
+    const d = new Date(isoString);
+    return d.toLocaleDateString("id-ID", {
+      day: "numeric", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    }).replace(".", ":");
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <button
-          onClick={() => setShowForm(!showForm)}
+    <div className="space-y-5">
+      {/* HEADER & TOMBOL TAMBAH */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+          Daftar Target
+        </h2>
+        <button 
+          onClick={() => setShowForm(!showForm)} 
           className="text-xs font-medium bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
         >
           {showForm ? "Batal" : "+ Target Baru"}
         </button>
       </div>
 
+      {/* FORM TAMBAH */}
       {showForm && (
-        <form
-          action={handleAdd}
-          className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3"
-        >
-          <input
-            name="title"
-            required
-            placeholder="Mau nabung buat apa? (Misal: Beli Laptop)"
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+        <form action={handleAdd} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3 animate-in fade-in slide-in-from-top-4">
+          <input 
+            name="title" 
+            required 
+            placeholder="Mau nabung buat apa? (Misal: Beli Laptop)" 
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" 
           />
           <AmountInput name="targetAmount" required />
-          <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-2 rounded-lg text-sm"
-          >
+          <button type="submit" className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-2.5 rounded-lg text-sm transition">
             Simpan Target
           </button>
         </form>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* GRID KARTU TARGET */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {goals.map((goal) => {
-          const collected = goal.deposits.reduce((sum, d) => sum + d.amount, 0);
+          const totalDeposit = goal.deposits.reduce((sum, d) => sum + d.amount, 0);
+          const totalWithdraw = (goal.withdrawals || []).reduce((sum, w) => sum + w.amount, 0);
+          const collected = totalDeposit - totalWithdraw;
+          
           const pct = Math.min(Math.round((collected / goal.targetAmount) * 100), 100);
           const isDone = collected >= goal.targetAmount;
 
+          const allHistory = [
+            ...goal.deposits.map(d => ({ ...d, type: "deposit" })),
+            ...(goal.withdrawals || []).map(w => ({ ...w, type: "withdraw" }))
+          ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
           return (
-            <div
-              key={goal.id}
-              className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3 shadow-sm relative overflow-hidden"
-            >
+            <div key={goal.id} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-sm relative overflow-hidden flex flex-col">
               {isDone && <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">TERCAPAI 🎉</div>}
               
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold text-sm">{goal.title}</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Terkumpul: <span className="font-medium text-gray-900 dark:text-gray-100">Rp {collected.toLocaleString("id-ID")}</span>
-                  </p>
-                  <p className="text-[10px] text-gray-400">Target: Rp {goal.targetAmount.toLocaleString("id-ID")}</p>
+              <div className="flex justify-between items-start mb-4">
+                <div className="pr-6">
+                  <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 line-clamp-1">{goal.title}</h3>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5">Target: Rp {goal.targetAmount.toLocaleString("id-ID")}</p>
                 </div>
-                <button onClick={() => handleDelete(goal.id)} className="text-gray-300 hover:text-red-500 text-xs">✕</button>
+                <button onClick={() => handleDelete(goal.id)} className="text-gray-300 hover:text-red-500 p-1">✕</button>
+              </div>
+
+              {/* Angka Terkumpul */}
+              <div className="mb-4">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+                  Rp {collected.toLocaleString("id-ID")}
+                </p>
+                <div className="flex justify-between text-[10px] mt-1.5 font-medium">
+                  <span className={isDone ? "text-green-600" : "text-red-600"}>{pct}% tercapai</span>
+                  <span className="text-gray-400">Sisa Rp {(goal.targetAmount - collected).toLocaleString("id-ID")}</span>
+                </div>
               </div>
 
               {/* Progress Bar */}
-              <div>
-                <div className="flex justify-between text-[10px] mb-1 font-medium">
-                  <span className={isDone ? "text-green-600" : "text-red-600"}>{pct}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${isDone ? "bg-green-500" : "bg-red-500"}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
+              <div className="h-2.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden mb-5">
+                <div className={`h-full rounded-full transition-all duration-500 ${isDone ? "bg-green-500" : "bg-red-500"}`} style={{ width: `${pct}%` }} />
               </div>
 
-              {/* Tombol Nabung */}
-              {depositId === goal.id ? (
-                <form action={handleDeposit} className="flex gap-2 items-center bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
-                  <input type="hidden" name="goalId" value={goal.id} />
-                  <div className="flex-1">
-                    <AmountInput name="amount" required />
+              {/* Aksi */}
+              <div className="mt-auto">
+                {actionId === goal.id ? (
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in-95">
+                    {actionType === "history" ? (
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Riwayat</h4>
+                          <button onClick={() => { setActionId(null); setActionType(null); }} className="text-gray-400 hover:text-gray-700 text-xs">✕</button>
+                        </div>
+                        <div className="max-h-32 overflow-y-auto space-y-2 pr-1">
+                          {allHistory.length === 0 && <p className="text-[10px] text-gray-500 text-center py-2">Belum ada riwayat.</p>}
+                          {allHistory.map((h) => (
+                            <div key={h.id} className="flex justify-between items-center text-xs border-b border-gray-100 dark:border-gray-800 pb-1.5 last:border-0">
+                              <div>
+                                <p className={h.type === "deposit" ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
+                                  {h.type === "deposit" ? "+" : "-"} Rp {h.amount.toLocaleString("id-ID")}
+                                </p>
+                                <p className="text-[9px] text-gray-400">{formatTanggalJam(h.date)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <form onSubmit={(e) => handleActionSubmit(e, actionType as "deposit" | "withdraw")} className="space-y-2">
+                        <input type="hidden" name="goalId" value={goal.id} />
+                        <div className="flex gap-2 items-center">
+                          <div className="flex-1">
+                            <AmountInput name="amount" required />
+                          </div>
+                          <button type="submit" className={`${actionType === "deposit" ? "bg-green-600" : "bg-red-600"} text-white px-3 py-2 rounded-lg text-xs font-medium`}>
+                            {actionType === "deposit" ? "Nabung" : "Tarik"}
+                          </button>
+                          <button type="button" onClick={() => { setActionId(null); setActionType(null); }} className="text-gray-400 text-xs px-1">✕</button>
+                        </div>
+                      </form>
+                    )}
                   </div>
-                  <button type="submit" className="bg-green-600 text-white px-3 py-1.5 rounded-md text-xs font-medium">Nabung</button>
-                  <button type="button" onClick={() => setDepositId(null)} className="text-gray-400 text-xs px-1">✕</button>
-                </form>
-              ) : (
-                <button
-                  onClick={() => setDepositId(goal.id)}
-                  className="w-full text-xs font-medium border border-gray-300 dark:border-gray-700 hover:border-red-500 hover:text-red-500 py-1.5 rounded-lg transition"
-                >
-                  + Nabung
-                </button>
-              )}
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => { setActionId(goal.id); setActionType("deposit"); }} className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-green-500 hover:text-green-500 py-1.5 rounded-lg transition">
+                      + Nabung
+                    </button>
+                    <button onClick={() => { setActionId(goal.id); setActionType("withdraw"); }} className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-red-500 hover:text-red-500 py-1.5 rounded-lg transition">
+                      - Tarik
+                    </button>
+                    <button onClick={() => { setActionId(goal.id); setActionType("history"); }} className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-blue-500 hover:text-blue-500 py-1.5 rounded-lg transition">
+                      Riwayat
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
 
       {goals.length === 0 && !showForm && (
-        <div className="text-center py-12 border border-dashed rounded-2xl">
-          <p className="text-4xl mb-2">🎯</p>
-          <p className="text-sm text-gray-500">Belum ada target tabungan.</p>
+        <div className="text-center py-20 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl">
+          <p className="text-4xl mb-3">🎯</p>
+          <p className="text-sm text-gray-500 font-medium">Belum ada target tabungan.</p>
+          <p className="text-xs text-gray-400 mt-1">Bikin target biar makin semangat nabung!</p>
         </div>
       )}
     </div>

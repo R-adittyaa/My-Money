@@ -1,4 +1,10 @@
-import { getGoals, addGoal, deleteGoal, addGoalDeposit } from "@/lib/storage";
+import {
+  getGoals,
+  addGoal,
+  deleteGoal,
+  addGoalDeposit,
+  withdrawGoal,
+} from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -41,6 +47,28 @@ export default async function GoalsPage() {
     revalidatePath("/goals");
   }
 
+  async function handleWithdraw(formData: FormData) {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    const goalId = formData.get("goalId") as string;
+    const amount = Number(formData.get("amount"));
+    
+    if (amount <= 0) throw new Error("Nominal tidak valid");
+
+    // Validasi biar gak narik lebih dari saldo tabungan
+    const goals = await getGoals(session.user.id);
+    const goal = goals.find((g) => g.id === goalId);
+    if (goal) {
+      const collected = goal.deposits.reduce((sum, d) => sum + d.amount, 0) - 
+                        (goal.withdrawals || []).reduce((sum, w) => sum + w.amount, 0);
+      if (amount > collected) throw new Error("Saldo tabungan tidak cukup");
+    }
+
+    await withdrawGoal(session.user.id, goalId, amount);
+    revalidatePath("/goals");
+  }
+
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0">
       <div className="flex items-center gap-2">
@@ -53,6 +81,7 @@ export default async function GoalsPage() {
         onAdd={handleAdd}
         onDelete={handleDelete}
         onDeposit={handleDeposit}
+        onWithdraw={handleWithdraw}
       />
     </main>
   );
