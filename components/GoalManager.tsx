@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion"; // <-- Import
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
+import confetti from "canvas-confetti"; // <-- Import Confetti
 import AmountInput from "./AmountInput";
 
 type Goal = {
@@ -25,6 +26,25 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
   const [showForm, setShowForm] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<"deposit" | "withdraw" | "history" | null>(null);
+
+  // Efek Confetti pas pertama kali render & ada target yang tercapai
+  useEffect(() => {
+    const hasCompletedGoal = goals.some((g) => {
+      const collected = g.deposits.reduce((sum, d) => sum + d.amount, 0) - 
+                        (g.withdrawals || []).reduce((sum, w) => sum + w.amount, 0);
+      return collected >= g.targetAmount && g.targetAmount > 0;
+    });
+
+    if (hasCompletedGoal) {
+      // Nembak confetti sekali
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#ef4444', '#f97316', '#f59e0b', '#22c55e']
+      });
+    }
+  }, [goals.length]); // Cuma jalan pas jumlah goal berubah (baru tambah/nabung)
 
   async function handleAdd(formData: FormData) {
     try {
@@ -98,14 +118,13 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
           ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return (
-            // ANIMASI DI SINI
             <motion.div 
               key={goal.id} 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }} // Munculnya bergantian
-              whileHover={{ y: -4 }} // Efek naik pas di hover
-              className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-sm relative overflow-hidden flex flex-col"
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -4 }}
+              className={`rounded-2xl bg-white dark:bg-gray-900 border p-5 shadow-sm relative overflow-hidden flex flex-col transition-colors ${isDone ? "border-green-500/50 bg-green-50/10 dark:bg-green-950/10" : "border-gray-200 dark:border-gray-800"}`}
             >
               {isDone && <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">TERCAPAI 🎉</div>}
               
@@ -164,20 +183,30 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                         <input type="hidden" name="goalId" value={goal.id} />
                         <div className="flex gap-2 items-center">
                           <div className="flex-1">
-                            <AmountInput name="amount" required />
+                            <AmountInput name="amount" required autoFocus />
                           </div>
                           <button type="submit" className={`${actionType === "deposit" ? "bg-green-600" : "bg-red-600"} text-white px-3 py-2 rounded-lg text-xs font-medium`}>
                             {actionType === "deposit" ? "Nabung" : "Tarik"}
                           </button>
                           <button type="button" onClick={() => { setActionId(null); setActionType(null); }} className="text-gray-400 text-xs px-1">✕</button>
                         </div>
+                        
+                        {/* Teks bantuan validasi saldo saat Tarik */}
+                        {actionType === "withdraw" && (
+                          <p className="text-[10px] text-gray-500 text-right">Sisa tabungan: Rp {collected.toLocaleString("id-ID")}</p>
+                        )}
                       </form>
                     )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
-                    <button onClick={() => { setActionId(goal.id); setActionType("deposit"); }} className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-green-500 hover:text-green-500 py-1.5 rounded-lg transition">
-                      + Nabung
+                    {/* Tombol Nabung jadi disabled kalau udah tercapai */}
+                    <button 
+                      onClick={() => { setActionId(goal.id); setActionType("deposit"); }} 
+                      disabled={isDone}
+                      className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-green-500 hover:text-green-500 py-1.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:text-gray-500"
+                    >
+                      {isDone ? "Tercapai" : "+ Nabung"}
                     </button>
                     <button onClick={() => { setActionId(goal.id); setActionType("withdraw"); }} className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-red-500 hover:text-red-500 py-1.5 rounded-lg transition">
                       - Tarik

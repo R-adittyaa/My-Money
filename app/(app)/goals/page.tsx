@@ -47,14 +47,14 @@ export default async function GoalsPage() {
     revalidatePath("/goals");
   }
 
-  async function handleWithdraw(formData: FormData) {
+    async function handleWithdraw(formData: FormData) {
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
     const goalId = formData.get("goalId") as string;
     const amount = Number(formData.get("amount"));
     
-    if (amount <= 0) throw new Error("Nominal tidak valid");
+    if (amount <= 0) throw new Error("Nominal harus lebih dari 0");
 
     // Validasi biar gak narik lebih dari saldo tabungan
     const goals = await getGoals(session.user.id);
@@ -62,7 +62,10 @@ export default async function GoalsPage() {
     if (goal) {
       const collected = goal.deposits.reduce((sum, d) => sum + d.amount, 0) - 
                         (goal.withdrawals || []).reduce((sum, w) => sum + w.amount, 0);
-      if (amount > collected) throw new Error("Saldo tabungan tidak cukup");
+      
+      if (amount > collected) {
+        throw new Error(`Saldo tabungan gak cukup! Sisa tabungan cuma Rp ${collected.toLocaleString("id-ID")}`);
+      }
     }
 
     await withdrawGoal(session.user.id, goalId, amount);
