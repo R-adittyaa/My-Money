@@ -3,7 +3,7 @@ import {
   deleteTransaction,
   processRecurring,
   getBudgets,
-  updateTransaction, // <-- Tambahan
+  updateTransaction,
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -100,6 +100,7 @@ export default async function DashboardPage() {
     revalidatePath("/");
   }
 
+  // BENERIN BAGIAN INI
   async function handleUpdate(formData: FormData) {
     "use server";
     const session = await auth();
@@ -108,6 +109,7 @@ export default async function DashboardPage() {
     const amount = Number(formData.get("amount"));
     const type = formData.get("type") as "income" | "expense";
     const category = (formData.get("category") as string).trim();
+    const wallet = (formData.get("wallet") as string)?.trim() || "Tunai"; // <-- Tambahan
     const date = formData.get("date") as string;
 
     if (!id || !amount || !category) throw new Error("Data tidak lengkap");
@@ -117,6 +119,7 @@ export default async function DashboardPage() {
       amount,
       type,
       category,
+      wallet, // <-- Tambahan
       notes: ((formData.get("notes") as string) || "").trim(),
     });
     revalidatePath("/");
@@ -237,7 +240,7 @@ export default async function DashboardPage() {
                 transaction={t}
                 categoryIcon={categoryIcon(t.category)}
                 onDelete={handleDelete}
-                onUpdate={handleUpdate} // <-- Tambahan
+                onUpdate={handleUpdate}
               />
             ))}
           </ul>
