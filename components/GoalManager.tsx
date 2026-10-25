@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import confetti from "canvas-confetti"; // <-- Import Confetti
 import AmountInput from "./AmountInput";
 
 type Goal = {
@@ -26,25 +25,6 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
   const [showForm, setShowForm] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<"deposit" | "withdraw" | "history" | null>(null);
-
-  // Efek Confetti pas pertama kali render & ada target yang tercapai
-  useEffect(() => {
-    const hasCompletedGoal = goals.some((g) => {
-      const collected = g.deposits.reduce((sum, d) => sum + d.amount, 0) - 
-                        (g.withdrawals || []).reduce((sum, w) => sum + w.amount, 0);
-      return collected >= g.targetAmount && g.targetAmount > 0;
-    });
-
-    if (hasCompletedGoal) {
-      // Nembak confetti sekali
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#ef4444', '#f97316', '#f59e0b', '#22c55e']
-      });
-    }
-  }, [goals.length]); // Cuma jalan pas jumlah goal berubah (baru tambah/nabung)
 
   async function handleAdd(formData: FormData) {
     try {
@@ -183,7 +163,8 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                         <input type="hidden" name="goalId" value={goal.id} />
                         <div className="flex gap-2 items-center">
                           <div className="flex-1">
-                            <AmountInput name="amount" required autoFocus />
+                            {/* HAPUS autoFocus biar gak error di Vercel */}
+                            <AmountInput name="amount" required />
                           </div>
                           <button type="submit" className={`${actionType === "deposit" ? "bg-green-600" : "bg-red-600"} text-white px-3 py-2 rounded-lg text-xs font-medium`}>
                             {actionType === "deposit" ? "Nabung" : "Tarik"}
@@ -191,7 +172,6 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                           <button type="button" onClick={() => { setActionId(null); setActionType(null); }} className="text-gray-400 text-xs px-1">✕</button>
                         </div>
                         
-                        {/* Teks bantuan validasi saldo saat Tarik */}
                         {actionType === "withdraw" && (
                           <p className="text-[10px] text-gray-500 text-right">Sisa tabungan: Rp {collected.toLocaleString("id-ID")}</p>
                         )}
@@ -200,7 +180,6 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
-                    {/* Tombol Nabung jadi disabled kalau udah tercapai */}
                     <button 
                       onClick={() => { setActionId(goal.id); setActionType("deposit"); }} 
                       disabled={isDone}
