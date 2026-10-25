@@ -5,18 +5,23 @@ import { useRef, useTransition, useState } from "react";
 import { useFormStatus } from "react-dom";
 import AmountInput from "./AmountInput";
 import CategoryModal from "./CategoryModal";
+import WalletModal from "./WalletModal";
 
 type Category = { id: string; name: string; type: "income" | "expense" | "both" };
+type Wallet = { id: string; name: string };
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
   categories: Category[];
+  wallets: Wallet[];
   onAddCategory: (name: string, type: "income" | "expense") => Promise<void>;
-  onEditCategory: (id: string, name: string, type: "income" | "expense") => Promise<void>; // <-- Baru
+  onEditCategory: (id: string, name: string, type: "income" | "expense") => Promise<void>;
   onDeleteCategory: (id: string) => Promise<void>;
+  onAddWallet: (name: string) => Promise<void>;
+  onEditWallet: (id: string, name: string) => Promise<void>;
+  onDeleteWallet: (id: string) => Promise<void>;
 };
 
-// Tombol submit dengan validasi kategori
 function SubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
@@ -30,13 +35,19 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
   );
 }
 
-export default function TransactionForm({ action, categories, onAddCategory, onEditCategory, onDeleteCategory }: Props) {
+export default function TransactionForm({ 
+  action, categories, wallets, 
+  onAddCategory, onEditCategory, onDeleteCategory,
+  onAddWallet, onEditWallet, onDeleteWallet
+}: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
 
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState("");
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   function onSubmit(formData: FormData) {
     const amount = Number(formData.get("amount"));
@@ -48,17 +59,24 @@ export default function TransactionForm({ action, categories, onAddCategory, onE
         toast.success(`Transaksi tersimpan!`, { description: `Rp ${amount.toLocaleString("id-ID")}` });
         setFormKey((prev) => prev + 1);
         setSelectedCategory("");
+        setSelectedWallet("");
       } catch (err: any) {
         if (err.message && err.message.includes("Budget")) {
           toast.error(err.message, { duration: 5000 });
           setFormKey((prev) => prev + 1);
           setSelectedCategory("");
+          setSelectedWallet("");
         } else {
           toast.error("Gagal menyimpan transaksi");
         }
       }
     });
   }
+
+  // Ambil jam sekarang buat default
+  const now = new Date();
+  const defaultDate = now.toISOString().slice(0, 10);
+  const defaultTime = now.toLocaleTimeString("id-ID", { hour12: false, hour: "2-digit", minute: "2-digit" });
 
   return (
     <>
@@ -69,31 +87,67 @@ export default function TransactionForm({ action, categories, onAddCategory, onE
           <h2 className="font-semibold text-sm">Tambah Transaksi</h2>
         </div>
 
-        <input name="date" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
-
+        {/* Date & Time (Dua Kolom) */}
         <div className="grid grid-cols-2 gap-2">
-          <label className="cursor-pointer">
-            <input type="radio" name="type" value="expense" defaultChecked className="peer sr-only" />
-            <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-red-600 peer-checked:text-white transition">↓ Keluar</div>
-          </label>
-          <label className="cursor-pointer">
-            <input type="radio" name="type" value="income" className="peer sr-only" />
-            <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-green-600 peer-checked:text-white transition">↑ Masuk</div>
-          </label>
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+              Tanggal <span className="text-red-500">*</span>
+            </label>
+            <input 
+              name="date" 
+              type="date" 
+              required 
+              defaultValue={defaultDate} 
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" 
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+              Jam <span className="text-red-500">*</span>
+            </label>
+            <input 
+              name="time" 
+              type="time" 
+              required 
+              defaultValue={defaultTime} 
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" 
+            />
+          </div>
         </div>
 
-        <AmountInput name="amount" required />
-
-        {/* INPUT KATEGORI (WAJIB PILIH) */}
         <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+            Tipe <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="cursor-pointer">
+              <input type="radio" name="type" value="expense" defaultChecked className="peer sr-only" />
+              <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-red-600 peer-checked:text-white transition">↓ Keluar</div>
+            </label>
+            <label className="cursor-pointer">
+              <input type="radio" name="type" value="income" className="peer sr-only" />
+              <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-green-600 peer-checked:text-white transition">↑ Masuk</div>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+            Nominal <span className="text-red-500">*</span>
+          </label>
+          <AmountInput name="amount" required />
+        </div>
+
+        <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+            Kategori <span className="text-red-500">*</span>
+          </label>
           <input type="hidden" name="category" value={selectedCategory} />
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => setIsCategoryModalOpen(true)}
             className={`w-full rounded-lg border px-3 py-2 text-sm text-left flex justify-between items-center transition ${
-              selectedCategory 
-                ? "border-red-500 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 font-medium" 
-                : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 hover:border-gray-400"
+              selectedCategory ? "border-red-500 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 font-medium" : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 hover:border-gray-400"
             }`}
           >
             <span>{selectedCategory || "Pilih Kategori..."}</span>
@@ -101,20 +155,51 @@ export default function TransactionForm({ action, categories, onAddCategory, onE
           </button>
         </div>
 
-        <input name="notes" placeholder="Catatan (opsional)" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
+        <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+            Sumber Dana <span className="text-red-500">*</span>
+          </label>
+          <input type="hidden" name="wallet" value={selectedWallet} />
+          <button
+            type="button"
+            onClick={() => setIsWalletModalOpen(true)}
+            className={`w-full rounded-lg border px-3 py-2 text-sm text-left flex justify-between items-center transition ${
+              selectedWallet ? "border-red-500 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 font-medium" : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 hover:border-gray-400"
+            }`}
+          >
+            <span>{selectedWallet || "Pilih Dompet..."}</span>
+            <span className="text-xs opacity-50">▼</span>
+          </button>
+        </div>
 
-        {/* Tombol simpan otomatis mati kalau selectedCategory kosong */}
-        <SubmitButton disabled={!selectedCategory} />
+        <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+            Catatan <span className="text-gray-400 dark:text-gray-500">(opsional)</span>
+          </label>
+          <input name="notes" placeholder="Misal: Makan siang di warteg" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
+        </div>
+
+        <SubmitButton disabled={!selectedCategory || !selectedWallet} />
       </form>
 
       <CategoryModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
         categories={categories}
         onSelect={(name) => setSelectedCategory(name)}
         onAdd={onAddCategory}
         onEdit={onEditCategory}
         onDelete={onDeleteCategory}
+      />
+
+      <WalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        wallets={wallets}
+        onSelect={(name) => setSelectedWallet(name)}
+        onAdd={onAddWallet}
+        onEdit={onEditWallet}
+        onDelete={onDeleteWallet}
       />
     </>
   );

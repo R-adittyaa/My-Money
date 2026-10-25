@@ -1,5 +1,10 @@
 export type TransactionType = "income" | "expense";
 
+export type Wallet = {
+  id: string;
+  name: string;
+};
+
 export type Transaction = {
   id: string;
   date: string;
@@ -7,6 +12,7 @@ export type Transaction = {
   type: TransactionType;
   category: string;
   notes: string;
+  wallet: string; // <-- Tambahan Baru
 };
 
 export type TransactionInput = Omit<Transaction, "id">;
@@ -51,12 +57,10 @@ export type Category = {
   type: "income" | "expense" | "both";
 };
 
-// === TIPE DATA TARGET TABUNGAN (DIPERBARUI) ===
-
 export type GoalDeposit = {
   id: string;
   amount: number;
-  date: string; // ISO string lengkap (tanggal + jam)
+  date: string;
 };
 
 export type GoalWithdrawal = {
@@ -70,7 +74,7 @@ export type Goal = {
   title: string;
   targetAmount: number;
   deposits: GoalDeposit[];
-  withdrawals: GoalWithdrawal[]; // <-- Tambahan Baru
+  withdrawals: GoalWithdrawal[];
   createdAt: string;
 };
 

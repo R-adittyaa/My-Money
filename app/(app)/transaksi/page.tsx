@@ -7,7 +7,10 @@ import {
   updateTransaction,
   getCategories,
   saveCategories,
-  updateCategory, // <-- TAMBAHAN
+  updateCategory,
+  getWallets,
+  saveWallets,
+  updateWallet,
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -65,6 +68,7 @@ export default async function TransaksiPage({
 
   const all = await getTransactions(userId);
   const dbCategories = await getCategories(userId);
+  const dbWallets = await getWallets(userId);
 
   const availableMonths = Array.from(
     new Set(all.map((t) => t.date.slice(0, 7)))
@@ -137,15 +141,18 @@ export default async function TransaksiPage({
     const amount = Number(formData.get("amount"));
     const type = formData.get("type") as "income" | "expense";
     const category = (formData.get("category") as string).trim();
-    const date = formData.get("date") as string;
+    const wallet = (formData.get("wallet") as string).trim();
     
+    // Gabungin Tanggal & Jam
+    const dateInput = formData.get("date") as string;
+    const timeInput = formData.get("time") as string;
+    const date = `${dateInput}T${timeInput}:00.000Z`;
+
     if (!amount || amount <= 0) throw new Error("Invalid amount");
+    if (!wallet) throw new Error("Sumber dana wajib dipilih");
 
     await addTransaction(session.user.id, {
-      date,
-      amount,
-      type,
-      category,
+      date, amount, type, category, wallet,
       notes: ((formData.get("notes") as string) || "").trim(),
     });
 
@@ -157,30 +164,24 @@ export default async function TransaksiPage({
 
       if (budget) {
         const allTxs = await getTransactions(session.user.id);
-        const currentMonth = date.slice(0, 7);
+        const currentMonth = dateInput.slice(0, 7);
         const spent = allTxs
           .filter((t) => t.type === "expense" && t.category === category && t.date.startsWith(currentMonth))
           .reduce((sum, t) => sum + t.amount, 0);
 
         const pct = Math.round((spent / budget.limit) * 100);
         
-        if (pct >= 100) {
-          warningMessage = `🚨 Budget ${category} sudah lewat batas! (${pct}%)`;
-        } else if (pct >= 80) {
-          warningMessage = `⚠️ Budget ${category} tinggal ${100 - pct}% lagi!`;
-        }
+        if (pct >= 100) warningMessage = `🚨 Budget ${category} sudah lewat batas! (${pct}%)`;
+        else if (pct >= 80) warningMessage = `⚠️ Budget ${category} tinggal ${100 - pct}% lagi!`;
       }
     }
 
     revalidatePath("/transaksi");
     revalidatePath("/");
-    
-    if (warningMessage) {
-       throw new Error(warningMessage);
-    }
+    if (warningMessage) throw new Error(warningMessage);
   }
 
-  // ==== SERVER ACTION: HAPUS TRANSAKSI ====
+  // ==== SERVER ACTION: HAPUS ====
   async function handleDelete(formData: FormData) {
     "use server";
     const session = await auth();
@@ -190,7 +191,7 @@ export default async function TransaksiPage({
     revalidatePath("/");
   }
 
-  // ==== SERVER ACTION: EDIT TRANSAKSI ====
+  // ==== SERVER ACTION: EDIT ====
   async function handleUpdate(formData: FormData) {
     "use server";
     const session = await auth();
@@ -200,18 +201,19 @@ export default async function TransaksiPage({
     const amount = Number(formData.get("amount"));
     const type = formData.get("type") as "income" | "expense";
     const category = (formData.get("category") as string).trim();
-    const date = formData.get("date") as string;
+    const wallet = (formData.get("wallet") as string).trim();
+    
+    // Gabungin Tanggal & Jam
+    const dateInput = formData.get("date") as string;
+    const timeInput = formData.get("time") as string;
+    const date = `${dateInput}T${timeInput}:00.000Z`;
 
-    if (!id || !amount || !category) throw new Error("Data tidak lengkap");
+    if (!id || !amount || !category || !wallet) throw new Error("Data tidak lengkap");
 
     await updateTransaction(session.user.id, id, {
-      date,
-      amount,
-      type,
-      category,
+      date, amount, type, category, wallet,
       notes: ((formData.get("notes") as string) || "").trim(),
     });
-
     revalidatePath("/transaksi");
     revalidatePath("/");
   }
@@ -222,10 +224,7 @@ export default async function TransaksiPage({
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
     const cats = await getCategories(session.user.id);
-    await saveCategories(session.user.id, [
-      ...cats,
-      { id: crypto.randomUUID(), name, type },
-    ]);
+    await saveCategories(session.user.id, [...cats, { id: crypto.randomUUID(), name, type }]);
     revalidatePath("/transaksi");
   }
 
@@ -242,10 +241,34 @@ export default async function TransaksiPage({
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
     const cats = await getCategories(session.user.id);
-    await saveCategories(
-      session.user.id,
-      cats.filter((c) => c.id !== id)
-    );
+    await saveCategories(session.user.id, cats.filter((c) => c.id !== id));
+    revalidatePath("/transaksi");
+  }
+
+  // ==== SERVER ACTION: DOMPET ====
+  async function handleAddWallet(name: string) {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    const wallets = await getWallets(session.user.id);
+    await saveWallets(session.user.id, [...wallets, { id: crypto.randomUUID(), name }]);
+    revalidatePath("/transaksi");
+  }
+
+  async function handleEditWallet(id: string, name: string) {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    await updateWallet(session.user.id, id, name);
+    revalidatePath("/transaksi");
+  }
+
+  async function handleDeleteWallet(id: string) {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    const wallets = await getWallets(session.user.id);
+    await saveWallets(session.user.id, wallets.filter((w) => w.id !== id));
     revalidatePath("/transaksi");
   }
 
@@ -259,9 +282,13 @@ export default async function TransaksiPage({
       <TransactionForm
         action={handleAdd}
         categories={dbCategories}
+        wallets={dbWallets}
         onAddCategory={handleAddCategory}
         onEditCategory={handleEditCategory}
         onDeleteCategory={handleDeleteCategory}
+        onAddWallet={handleAddWallet}
+        onEditWallet={handleEditWallet}
+        onDeleteWallet={handleDeleteWallet}
       />
 
       {availableMonths.length > 0 && (
@@ -275,11 +302,9 @@ export default async function TransaksiPage({
             const sp = new URLSearchParams();
             sp.set("month", m);
             if (params.q) sp.set("q", params.q);
-            if (params.type && params.type !== "all")
-              sp.set("type", params.type);
+            if (params.type && params.type !== "all") sp.set("type", params.type);
             if (params.cat) sp.set("cat", params.cat);
-            if (params.sort && params.sort !== "newest")
-              sp.set("sort", params.sort);
+            if (params.sort && params.sort !== "newest") sp.set("sort", params.sort);
             return (
               <a
                 key={m}
@@ -316,9 +341,7 @@ export default async function TransaksiPage({
           <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 py-12 text-center">
             <p className="text-4xl mb-2">{hasFilter ? "🔍" : "📝"}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {hasFilter
-                ? "Gak ada transaksi yang cocok"
-                : "Belum ada transaksi bulan ini"}
+              {hasFilter ? "Gak ada transaksi yang cocok" : "Belum ada transaksi bulan ini"}
             </p>
           </div>
         )}
@@ -335,13 +358,7 @@ export default async function TransaksiPage({
                 <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
                   {formatTanggal(date)}
                 </p>
-                <p
-                  className={`text-xs font-semibold tabular-nums ${
-                    dayTotal >= 0
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400"
-                  }`}
-                >
+                <p className={`text-xs font-semibold tabular-nums ${dayTotal >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                   {dayTotal >= 0 ? "+" : ""}
                   {formatRupiah(dayTotal)}
                 </p>

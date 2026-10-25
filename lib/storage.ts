@@ -10,6 +10,7 @@ import {
   Category,
   Goal,
   GoalInput,
+  Wallet, // <-- Import Wallet
 } from "./types";
 
 const redis = new Redis({
@@ -22,6 +23,7 @@ const recKey = (userId: string) => `my-money:recurring:${userId}`;
 const budgetKey = (userId: string) => `my-money:budgets:${userId}`;
 const catKey = (userId: string) => `my-money:categories:${userId}`;
 const goalKey = (userId: string) => `my-money:goals:${userId}`;
+const walletKey = (userId: string) => `my-money:wallets:${userId}`; // <-- Key Baru
 
 // ============ TRANSACTIONS ============
 
@@ -142,6 +144,7 @@ export async function processRecurring(userId: string): Promise<number> {
       type: tpl.type,
       category: tpl.category,
       notes: tpl.notes || "(berulang)",
+      wallet: "Tunai", // Default fallback buat transaksi berulang lama
     });
 
     updatedTemplates.push({ ...tpl, lastGenerated: currentMonth });
@@ -238,7 +241,7 @@ export async function updateCategory(userId: string, id: string, name: string, t
   await saveCategories(userId, updated);
 }
 
-// ============ GOALS (TARGET TABUNGAN) ============
+// ============ GOALS ============
 
 export const getGoals = unstable_cache(
   async (userId: string): Promise<Goal[]> => {
@@ -263,7 +266,7 @@ export async function addGoal(userId: string, input: GoalInput) {
     ...input,
     id: crypto.randomUUID(),
     deposits: [],
-    withdrawals: [], // <-- Init array kosong
+    withdrawals: [],
     createdAt: new Date().toISOString(),
   };
   items.push(newItem);
@@ -286,7 +289,7 @@ export async function addGoalDeposit(userId: string, goalId: string, amount: num
         ...g,
         deposits: [
           ...g.deposits,
-          { id: crypto.randomUUID(), amount, date: new Date().toISOString() }, // <-- Tambah Jam
+          { id: crypto.randomUUID(), amount, date: new Date().toISOString() },
         ],
       };
     }
@@ -312,4 +315,39 @@ export async function withdrawGoal(userId: string, goalId: string, amount: numbe
   });
   await saveGoals(userId, updated);
   revalidateTag("goals", "max");
+}
+
+// ============ WALLETS (DOMPET) ============
+
+export const getWallets = unstable_cache(
+  async (userId: string): Promise<Wallet[]> => {
+    try {
+      const data = await redis.get<Wallet[]>(walletKey(userId));
+      if (!data || data.length === 0) {
+        const defaults: Wallet[] = [
+          { id: crypto.randomUUID(), name: "Tunai" },
+          { id: crypto.randomUUID(), name: "Bank" },
+          { id: crypto.randomUUID(), name: "E-Wallet" },
+        ];
+        await redis.set(walletKey(userId), defaults);
+        return defaults;
+      }
+      return data;
+    } catch (err) {
+      return [];
+    }
+  },
+  ["wallets-cache"],
+  { revalidate: 60, tags: ["wallets"] }
+);
+
+export async function saveWallets(userId: string, items: Wallet[]) {
+  await redis.set(walletKey(userId), items);
+  revalidateTag("wallets", "max");
+}
+
+export async function updateWallet(userId: string, id: string, name: string) {
+  const wallets = await getWallets(userId);
+  const updated = wallets.map((w) => (w.id === id ? { ...w, name } : w));
+  await saveWallets(userId, updated);
 }
