@@ -75,7 +75,7 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
       </div>
 
       {showForm && (
-        <form action={handleAdd} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3 animate-in fade-in slide-in-from-top-4">
+        <form action={handleAdd} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
           <input name="title" required placeholder="Mau nabung buat apa? (Misal: Beli Laptop)" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
           <AmountInput name="targetAmount" required />
           <button type="submit" className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-2.5 rounded-lg text-sm transition">Simpan Target</button>
@@ -99,8 +99,7 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
           return (
             <div 
               key={goal.id} 
-              // PAKE CSS TRANSITION AJA, GAK PAKE FRAMER MOTION
-              className={`rounded-2xl bg-white dark:bg-gray-900 border p-5 shadow-sm relative overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${isDone ? "border-green-500/50 bg-green-50/10 dark:bg-green-950/10" : "border-gray-200 dark:border-gray-800"}`}
+              className={`rounded-2xl bg-white dark:bg-gray-900 border p-5 shadow-sm relative overflow-hidden flex flex-col ${isDone ? "border-green-500/50 bg-green-50/10 dark:bg-green-950/10" : "border-gray-200 dark:border-gray-800"}`}
             >
               {isDone && <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">TERCAPAI 🎉</div>}
               
@@ -122,17 +121,17 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                 </div>
               </div>
 
-              {/* Progress Bar CSS biasa */}
+              {/* Progress Bar CSS Standard */}
               <div className="h-2.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden mb-5">
                 <div 
-                  className={`h-full rounded-full transition-all duration-1000 ease-out ${isDone ? "bg-green-500" : "bg-red-500"}`} 
+                  className={`h-full rounded-full ${isDone ? "bg-green-500" : "bg-red-500"}`} 
                   style={{ width: `${pct}%` }}
                 />
               </div>
 
               <div className="mt-auto">
                 {actionId === goal.id ? (
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in-95">
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
                     {actionType === "history" ? (
                       <div className="space-y-2">
                         <div className="flex justify-between items-center mb-2">
@@ -160,14 +159,14 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                           <div className="flex-1">
                             <AmountInput name="amount" required />
                           </div>
-                          <button type="submit" className={`${actionType === "deposit" ? "bg-green-600" : "bg-red-600"} text-white px-3 py-2 rounded-lg text-xs font-medium`}>
+                          <button type="submit" className={`${actionType === "deposit" ? "bg-green-600" : "bg-red-600"} text-white px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap`}>
                             {actionType === "deposit" ? "Nabung" : "Tarik"}
                           </button>
                           <button type="button" onClick={() => { setActionId(null); setActionType(null); }} className="text-gray-400 text-xs px-1">✕</button>
                         </div>
                         
                         {actionType === "withdraw" && (
-                          <p className="text-[10px] text-gray-500 text-right">Sisa tabungan: Rp {collected.toLocaleString("id-ID")}</p>
+                          <p className="text-[10px] text-gray-500 text-right mt-1">Sisa tabungan: Rp {collected.toLocaleString("id-ID")}</p>
                         )}
                       </form>
                     )}
