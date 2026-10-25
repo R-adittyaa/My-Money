@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { useRef, useTransition, useState } from "react";
+import { useRef, useTransition, useState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import AmountInput from "./AmountInput";
 import CategoryModal from "./CategoryModal";
@@ -44,10 +44,25 @@ export default function TransactionForm({
   const [isPending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
 
+  // State buat Date & Time biar otomatis ngikutin
+  const [currentDate, setCurrentDate] = useState("");
+  const [currentTime, setCurrentTime] = useState("");
+
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedWallet, setSelectedWallet] = useState("");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+
+  // Pas pertama kali render, set jam & tanggal sekarang
+  useEffect(() => {
+    const now = new Date();
+    // Format YYYY-MM-DD
+    setCurrentDate(now.toISOString().slice(0, 10));
+    // Format HH:mm
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    setCurrentTime(`${hh}:${mm}`);
+  }, [formKey]); // <-- Setiap formKey berubah (abis simpan), jam di-refresh lagi
 
   function onSubmit(formData: FormData) {
     const amount = Number(formData.get("amount"));
@@ -73,11 +88,6 @@ export default function TransactionForm({
     });
   }
 
-  // Ambil jam sekarang buat default
-  const now = new Date();
-  const defaultDate = now.toISOString().slice(0, 10);
-  const defaultTime = now.toLocaleTimeString("id-ID", { hour12: false, hour: "2-digit", minute: "2-digit" });
-
   return (
     <>
       <form key={formKey} ref={formRef} action={onSubmit} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm space-y-3">
@@ -87,7 +97,7 @@ export default function TransactionForm({
           <h2 className="font-semibold text-sm">Tambah Transaksi</h2>
         </div>
 
-        {/* Date & Time (Dua Kolom) */}
+        {/* Date & Time */}
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
@@ -97,7 +107,8 @@ export default function TransactionForm({
               name="date" 
               type="date" 
               required 
-              defaultValue={defaultDate} 
+              value={currentDate}
+              onChange={(e) => setCurrentDate(e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" 
             />
           </div>
@@ -109,7 +120,8 @@ export default function TransactionForm({
               name="time" 
               type="time" 
               required 
-              defaultValue={defaultTime} 
+              value={currentTime}
+              onChange={(e) => setCurrentTime(e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" 
             />
           </div>
