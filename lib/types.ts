@@ -3,6 +3,7 @@ export type TransactionType = "income" | "expense";
 export type Wallet = {
   id: string;
   name: string;
+   initialBalance: number; 
 };
 
 export type Transaction = {

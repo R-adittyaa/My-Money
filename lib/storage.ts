@@ -10,7 +10,7 @@ import {
   Category,
   Goal,
   GoalInput,
-  Wallet, // <-- Import Wallet
+  Wallet,
 } from "./types";
 
 const redis = new Redis({
@@ -23,7 +23,7 @@ const recKey = (userId: string) => `my-money:recurring:${userId}`;
 const budgetKey = (userId: string) => `my-money:budgets:${userId}`;
 const catKey = (userId: string) => `my-money:categories:${userId}`;
 const goalKey = (userId: string) => `my-money:goals:${userId}`;
-const walletKey = (userId: string) => `my-money:wallets:${userId}`; // <-- Key Baru
+const walletKey = (userId: string) => `my-money:wallets:${userId}`;
 
 // ============ TRANSACTIONS ============
 
@@ -33,7 +33,6 @@ export const getTransactions = unstable_cache(
       const data = await redis.get<Transaction[]>(txKey(userId));
       return data || [];
     } catch (err) {
-      console.error("Redis get error:", err);
       return [];
     }
   },
@@ -42,12 +41,7 @@ export const getTransactions = unstable_cache(
 );
 
 export async function saveTransactions(userId: string, items: Transaction[]) {
-  try {
-    await redis.set(txKey(userId), items);
-  } catch (err) {
-    console.error("Redis set error:", err);
-    throw err;
-  }
+  await redis.set(txKey(userId), items);
 }
 
 export async function addTransaction(userId: string, input: TransactionInput) {
@@ -118,7 +112,6 @@ export async function processRecurring(userId: string): Promise<number> {
     getRecurring(userId),
     getTransactions(userId),
   ]);
-
   const activeTemplates = templates.filter((t) => t.active);
   if (activeTemplates.length === 0) return 0;
 
@@ -135,7 +128,6 @@ export async function processRecurring(userId: string): Promise<number> {
       updatedTemplates.push(tpl);
       continue;
     }
-
     const dateStr = `${currentMonth}-${String(tpl.dayOfMonth).padStart(2, "0")}`;
     newTransactions.unshift({
       id: crypto.randomUUID(),
@@ -144,9 +136,8 @@ export async function processRecurring(userId: string): Promise<number> {
       type: tpl.type,
       category: tpl.category,
       notes: tpl.notes || "(berulang)",
-      wallet: "Tunai", // Default fallback buat transaksi berulang lama
+      wallet: "Tunai", // fallback
     });
-
     updatedTemplates.push({ ...tpl, lastGenerated: currentMonth });
     generated++;
   }
@@ -287,10 +278,7 @@ export async function addGoalDeposit(userId: string, goalId: string, amount: num
     if (g.id === goalId) {
       return {
         ...g,
-        deposits: [
-          ...g.deposits,
-          { id: crypto.randomUUID(), amount, date: new Date().toISOString() },
-        ],
+        deposits: [...g.deposits, { id: crypto.randomUUID(), amount, date: new Date().toISOString() }],
       };
     }
     return g;
@@ -305,10 +293,7 @@ export async function withdrawGoal(userId: string, goalId: string, amount: numbe
     if (g.id === goalId) {
       return {
         ...g,
-        withdrawals: [
-          ...(g.withdrawals || []),
-          { id: crypto.randomUUID(), amount, date: new Date().toISOString() },
-        ],
+        withdrawals: [...(g.withdrawals || []), { id: crypto.randomUUID(), amount, date: new Date().toISOString() }],
       };
     }
     return g;
@@ -317,7 +302,7 @@ export async function withdrawGoal(userId: string, goalId: string, amount: numbe
   revalidateTag("goals", "max");
 }
 
-// ============ WALLETS (DOMPET) ============
+// ============ WALLETS ============
 
 export const getWallets = unstable_cache(
   async (userId: string): Promise<Wallet[]> => {
@@ -325,9 +310,9 @@ export const getWallets = unstable_cache(
       const data = await redis.get<Wallet[]>(walletKey(userId));
       if (!data || data.length === 0) {
         const defaults: Wallet[] = [
-          { id: crypto.randomUUID(), name: "Tunai" },
-          { id: crypto.randomUUID(), name: "Bank" },
-          { id: crypto.randomUUID(), name: "E-Wallet" },
+          { id: crypto.randomUUID(), name: "Tunai", initialBalance: 0 },
+          { id: crypto.randomUUID(), name: "Bank", initialBalance: 0 },
+          { id: crypto.randomUUID(), name: "E-Wallet", initialBalance: 0 },
         ];
         await redis.set(walletKey(userId), defaults);
         return defaults;
@@ -346,8 +331,8 @@ export async function saveWallets(userId: string, items: Wallet[]) {
   revalidateTag("wallets", "max");
 }
 
-export async function updateWallet(userId: string, id: string, name: string) {
+export async function updateWallet(userId: string, id: string, name: string, initialBalance: number) {
   const wallets = await getWallets(userId);
-  const updated = wallets.map((w) => (w.id === id ? { ...w, name } : w));
+  const updated = wallets.map((w) => (w.id === id ? { ...w, name, initialBalance } : w));
   await saveWallets(userId, updated);
 }

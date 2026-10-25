@@ -7,11 +7,12 @@ import { useState } from "react";
 const MAIN_NAV = [
   { href: "/", label: "Home", icon: "home" },
   { href: "/transaksi", label: "Transaksi", icon: "receipt" },
-  { href: "/goals", label: "Target", icon: "target" },
+  { href: "/dompet", label: "Dompet", icon: "wallet" }, // <-- Dompet
   { href: "/budget", label: "Budget", icon: "pie" },
 ];
 
 const MORE_NAV = [
+  { href: "/goals", label: "Target", icon: "target" }, // Target dipindah ke Lainnya
   { href: "/statistik", label: "Statistik", icon: "chart" },
   { href: "/berulang", label: "Berulang", icon: "repeat" },
   { href: "/pengaturan", label: "Pengaturan", icon: "settings" },
@@ -21,6 +22,7 @@ function Icon({ name, className = "w-6 h-6" }: { name: string; className?: strin
   const paths: Record<string, React.ReactNode> = {
     home: <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
     receipt: <><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/></>,
+    wallet: <><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></>,
     pie: <><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></>,
     target: <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
     repeat: <><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></>,
@@ -80,16 +82,16 @@ export default function NavBottom() {
           <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-t-3xl p-5 pb-8 shadow-2xl animate-in slide-in-from-bottom-full duration-300">
             <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-6"></div>
             <h3 className="text-sm font-bold mb-4">Menu Lainnya</h3>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               {MORE_NAV.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setShowMore(false)}
-                  className="flex flex-col items-center justify-center p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-950/30 transition group"
+                  className="flex flex-col items-center justify-center p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-950/30 transition group"
                 >
-                  <Icon name={item.icon} className="w-7 h-7 mb-2 text-gray-600 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400">
+                  <Icon name={item.icon} className="w-6 h-6 mb-2 text-gray-600 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
+                  <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 text-center">
                     {item.label}
                   </span>
                 </Link>

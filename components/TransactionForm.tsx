@@ -47,22 +47,22 @@ export default function TransactionForm({
   // State buat Date & Time biar otomatis ngikutin
   const [currentDate, setCurrentDate] = useState("");
   const [currentTime, setCurrentTime] = useState("");
+  const [isMounted, setIsMounted] = useState(false); // <-- Kunci anti-hydration
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedWallet, setSelectedWallet] = useState("");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
-  // Pas pertama kali render, set jam & tanggal sekarang
+  // Pas pertama kali render di browser, baru set jam & tanggal
   useEffect(() => {
+    setIsMounted(true);
     const now = new Date();
-    // Format YYYY-MM-DD
     setCurrentDate(now.toISOString().slice(0, 10));
-    // Format HH:mm
     const hh = String(now.getHours()).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
     setCurrentTime(`${hh}:${mm}`);
-  }, [formKey]); // <-- Setiap formKey berubah (abis simpan), jam di-refresh lagi
+  }, [formKey]);
 
   function onSubmit(formData: FormData) {
     const amount = Number(formData.get("amount"));
@@ -86,6 +86,11 @@ export default function TransactionForm({
         }
       }
     });
+  }
+
+  // Kalau belum mounted (masih di server), jangan render form dulu biar gak error
+  if (!isMounted) {
+    return <div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse"></div>;
   }
 
   return (
