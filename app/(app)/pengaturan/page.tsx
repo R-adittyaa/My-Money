@@ -1,6 +1,7 @@
 import { getTransactions } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import ExportButton from "@/components/ExportButton";
 import LogoutButton from "@/components/LogoutButton";
 import AccountSettings from "@/components/AccountSettings";
@@ -37,91 +38,103 @@ export default async function PengaturanPage() {
   }
 
   return (
-    <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0">
+    <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-6 max-w-4xl mx-auto lg:mx-0 pb-24">
       <div className="flex items-center gap-2">
         <span className="w-1 h-5 bg-red-600 rounded-full"></span>
-        <h1 className="text-lg font-bold">Pengaturan</h1>
+        <h1 className="text-xl font-bold">Pengaturan</h1>
       </div>
 
-      {/* Export */}
-      <section className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="w-1 h-4 bg-red-600 rounded-full"></span>
-          <h2 className="font-semibold text-sm">Export Data</h2>
-        </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Download semua transaksi dalam format CSV. Bisa dibuka di Excel atau
-          Google Sheets.
-        </p>
-        <ExportButton
-          onExport={handleExport}
-          availableMonths={availableMonths}
-          currentMonth={currentMonth}
-        />
-      </section>
-
-      {/* Ganti Password */}
-      <section className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="w-1 h-4 bg-red-600 rounded-full"></span>
-          <h2 className="font-semibold text-sm">Ganti Password</h2>
-        </div>
-        <AccountSettings />
-      </section>
-
-      {/* Akun — Logout */}
-      <section className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="w-1 h-4 bg-red-600 rounded-full"></span>
-          <h2 className="font-semibold text-sm">Akun</h2>
-        </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Keluar dari akun kamu di perangkat ini.
-        </p>
-        <LogoutButton />
-      </section>
-
-      {/* Info */}
-      <section className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="w-1 h-4 bg-red-600 rounded-full"></span>
-          <h2 className="font-semibold text-sm">Tentang</h2>
-        </div>
-        <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex justify-between">
-            <span>Total transaksi</span>
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              {all.length}
-            </span>
+      {/* SECTION: AKUN */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">Akun</h2>
+        
+        <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+              {session.user.name?.charAt(0).toUpperCase() || "U"}
+            </div>
+            <div>
+              <p className="font-bold text-sm">{session.user.name}</p>
+              <p className="text-xs text-gray-500">Personal Account</p>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span>Bulan aktif</span>
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              {availableMonths.length}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Versi</span>
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              v1.0
-            </span>
+          <div className="p-4 space-y-4">
+            <div>
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Ganti Password</p>
+              <AccountSettings />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Tips */}
-      <section className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 p-4 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="w-1 h-4 bg-red-600 rounded-full"></span>
-          <h2 className="font-semibold text-sm text-red-700 dark:text-red-400">
-            Tips
-          </h2>
+      {/* SECTION: PREFERENSI */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">Preferensi</h2>
+        
+        <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Tema Aplikasi</p>
+              <p className="text-xs text-gray-500">Saat ini mengikuti sistem (Dark/Light)</p>
+            </div>
+            <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 px-2 py-1 rounded-md font-medium">Auto</span>
+          </div>
+          <Link href="/dompet" className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+            <div>
+              <p className="font-medium text-sm">Kelola Dompet</p>
+              <p className="text-xs text-gray-500">Atur sumber dana dan saldo awal</p>
+            </div>
+            <span className="text-gray-400">→</span>
+          </Link>
         </div>
-        <p className="text-xs text-gray-600 dark:text-gray-400">
-          Backup data kamu secara berkala dengan fitur Export CSV di atas.
-          Simpan file-nya di Google Drive atau cloud storage biar aman.
-        </p>
       </section>
+
+      {/* SECTION: DATA & EXPORT */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">Data & Backup</h2>
+        
+        <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="font-medium text-sm">Total Transaksi</p>
+              <p className="text-xs text-gray-500">Data tersimpan di cloud</p>
+            </div>
+            <p className="font-bold text-lg text-red-600 dark:text-red-500">{all.length}</p>
+          </div>
+          <div className="h-px bg-gray-100 dark:bg-gray-800"></div>
+          <div>
+            <p className="font-medium text-sm mb-1">Export CSV</p>
+            <p className="text-xs text-gray-500 mb-3">Download data transaksi kamu ke format Excel/Sheets.</p>
+            <ExportButton
+              onExport={handleExport}
+              availableMonths={availableMonths}
+              currentMonth={currentMonth}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION: LAINNYA */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">Lainnya</h2>
+        
+        <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="p-4 flex items-center justify-between">
+            <p className="font-medium text-sm">Versi Aplikasi</p>
+            <p className="text-xs text-gray-500 font-mono">v2.0.0 (PWA)</p>
+          </div>
+          <div className="p-4 flex items-center justify-between">
+            <p className="font-medium text-sm">Logout</p>
+            <LogoutButton />
+          </div>
+        </div>
+      </section>
+
+      <div className="text-center pt-6 pb-2">
+        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+          My Money · Dibuat dengan ❤️
+        </p>
+      </div>
     </main>
   );
 }
