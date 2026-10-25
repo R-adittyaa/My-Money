@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 import AmountInput from "./AmountInput";
 
@@ -84,7 +83,7 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {goals.map((goal, index) => {
+        {goals.map((goal) => {
           const totalDeposit = goal.deposits.reduce((sum, d) => sum + d.amount, 0);
           const totalWithdraw = (goal.withdrawals || []).reduce((sum, w) => sum + w.amount, 0);
           const collected = totalDeposit - totalWithdraw;
@@ -98,13 +97,10 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
           ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return (
-            <motion.div 
+            <div 
               key={goal.id} 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -4 }}
-              className={`rounded-2xl bg-white dark:bg-gray-900 border p-5 shadow-sm relative overflow-hidden flex flex-col transition-colors ${isDone ? "border-green-500/50 bg-green-50/10 dark:bg-green-950/10" : "border-gray-200 dark:border-gray-800"}`}
+              // PAKE CSS TRANSITION AJA, GAK PAKE FRAMER MOTION
+              className={`rounded-2xl bg-white dark:bg-gray-900 border p-5 shadow-sm relative overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${isDone ? "border-green-500/50 bg-green-50/10 dark:bg-green-950/10" : "border-gray-200 dark:border-gray-800"}`}
             >
               {isDone && <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">TERCAPAI 🎉</div>}
               
@@ -126,12 +122,11 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                 </div>
               </div>
 
+              {/* Progress Bar CSS biasa */}
               <div className="h-2.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden mb-5">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 1, ease: "easeOut" }}
-                  className={`h-full rounded-full ${isDone ? "bg-green-500" : "bg-red-500"}`} 
+                <div 
+                  className={`h-full rounded-full transition-all duration-1000 ease-out ${isDone ? "bg-green-500" : "bg-red-500"}`} 
+                  style={{ width: `${pct}%` }}
                 />
               </div>
 
@@ -163,7 +158,6 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                         <input type="hidden" name="goalId" value={goal.id} />
                         <div className="flex gap-2 items-center">
                           <div className="flex-1">
-                            {/* HAPUS autoFocus biar gak error di Vercel */}
                             <AmountInput name="amount" required />
                           </div>
                           <button type="submit" className={`${actionType === "deposit" ? "bg-green-600" : "bg-red-600"} text-white px-3 py-2 rounded-lg text-xs font-medium`}>
@@ -183,7 +177,7 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                     <button 
                       onClick={() => { setActionId(goal.id); setActionType("deposit"); }} 
                       disabled={isDone}
-                      className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-green-500 hover:text-green-500 py-1.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:text-gray-500"
+                      className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-green-500 hover:text-green-500 py-1.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isDone ? "Tercapai" : "+ Nabung"}
                     </button>
@@ -196,7 +190,7 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           );
         })}
       </div>
