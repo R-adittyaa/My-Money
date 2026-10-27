@@ -20,6 +20,11 @@ type Props = {
   categoryIcon: string;
   onDelete: (formData: FormData) => Promise<void>;
   onUpdate: (formData: FormData) => Promise<void>;
+  // Props buat Multi-Select
+  isSelecting: boolean;
+  isSelected: boolean;
+  onToggleSelect: (id: string) => void;
+  onStartSelecting: (id: string) => void;
 };
 
 export default function TransactionDetail({
@@ -27,11 +32,15 @@ export default function TransactionDetail({
   categoryIcon,
   onDelete,
   onUpdate,
+  isSelecting,
+  isSelected,
+  onToggleSelect,
+  onStartSelecting,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false); // Buat Modal Detail
+  const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, setIsPending] = useState(false);
-  const [showContextMenu, setShowContextMenu] = useState(false); // Buat Long Press Menu
+  const [showContextMenu, setShowContextMenu] = useState(false); // Buat Long Press Menu (jika ada)
   
   const formRef = useRef<HTMLFormElement>(null);
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -70,22 +79,35 @@ export default function TransactionDetail({
     setTimeout(() => setIsEditing(false), 300);
   }
 
-  // --- LOGIKA LONG PRESS ---
+  // --- LOGIKA LONG PRESS MULTI-SELECT ---
   function handlePressStart() {
+    if (isSelecting) return; // Kalau udah di mode milih, long press dimatiin
     pressTimer.current = setTimeout(() => {
-      setShowContextMenu(true); // Buka menu pop-up
-      // Kasih getar dikit kalau di HP (opsional)
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate(50);
-      }
-    }, 500); // 500ms = 0.5 detik
+      // Nembak event custom ke BulkActionBar
+      window.dispatchEvent(new CustomEvent("tx-start-select", { detail: t.id }));
+      
+      // Panggil prop fungsi kalau lu gak pake custom event
+      if (onStartSelecting) onStartSelecting(t.id);
+
+      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(50);
+    }, 400); // 400ms hold
   }
 
   function handlePressEnd() {
     if (pressTimer.current) clearTimeout(pressTimer.current);
   }
 
-  // Batalin timernya kalau jari diangkat sebelum 500ms
+  function handleClick() {
+    if (isSelecting) {
+      // Kalau lagi milih, klik = centang
+      window.dispatchEvent(new CustomEvent("tx-select", { detail: t.id }));
+      if (onToggleSelect) onToggleSelect(t.id);
+    } else {
+      // Kalau gak milih, klik = buka detail
+      setIsOpen(true);
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (pressTimer.current) clearTimeout(pressTimer.current);
@@ -101,12 +123,23 @@ export default function TransactionDetail({
         onMouseLeave={handlePressEnd}
         onTouchStart={handlePressStart}
         onTouchEnd={handlePressEnd}
-        onClick={() => { if (!showContextMenu) setIsOpen(true); }} // Klik normal buka detail
-        onContextMenu={(e) => e.preventDefault()} // Matiin menu klik kanan browser bawaan
+        onClick={handleClick}
+        onContextMenu={(e) => e.preventDefault()} 
         className={`p-3 flex items-center gap-3 cursor-pointer select-none transition-colors relative ${
-          showContextMenu ? "bg-red-50 dark:bg-red-950/20" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          isSelected 
+            ? "bg-red-50 dark:bg-red-950/30" 
+            : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
         }`}
       >
+        {/* CHECKBOX (Cuma muncul pas mode milih) */}
+        {isSelecting && (
+          <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+            isSelected ? "bg-red-500 border-red-500" : "border-gray-300 dark:border-gray-600"
+          }`}>
+            {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+          </div>
+        )}
+
         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center text-base shrink-0">
           {categoryIcon}
         </div>
@@ -116,53 +149,14 @@ export default function TransactionDetail({
             {t.notes || (t.type === "income" ? "Pemasukan" : "Pengeluaran")}
           </p>
         </div>
-        <p
-          className={`text-sm font-semibold whitespace-nowrap tabular-nums ${
-            t.type === "income"
-              ? "text-green-600 dark:text-green-400"
-              : "text-red-600 dark:text-red-400"
-          }`}
-        >
-          {t.type === "income" ? "+" : "-"}
-          {formatRupiah(t.amount)}
+        <p className={`text-sm font-semibold whitespace-nowrap tabular-nums ${
+          t.type === "income" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+        }`}>
+          {t.type === "income" ? "+" : "-"}{formatRupiah(t.amount)}
         </p>
       </li>
 
-      {/* POP-UP MENU LONG PRESS (Muncul Melayang) */}
-      <AnimatePresence>
-        {showContextMenu && (
-          <>
-            {/* Overlay gelap transparan buat nutup menu */}
-            <div 
-              className="fixed inset-0 z-[90]" 
-              onClick={(e) => { e.stopPropagation(); setShowContextMenu(false); }} 
-            />
-            
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="absolute z-[100] right-12 top-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl flex flex-col overflow-hidden w-32"
-            >
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowContextMenu(false); setIsOpen(true); setIsEditing(true); }}
-                className="px-3 py-2 text-xs text-left font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              >
-                Edit Transaksi
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowContextMenu(false); }}
-                className="px-3 py-2 text-xs text-left font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition border-t border-gray-100 dark:border-gray-700"
-              >
-                {/* Kita suruh buka modal detail dulu biar hapusnya lewat modal (lebih aman) */}
-                Batal
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* --- MODAL DETAIL (Sama kayak sebelumnya) --- */}
+      {/* --- MODAL DETAIL --- */}
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeModal} />
@@ -177,8 +171,7 @@ export default function TransactionDetail({
                   </div>
                   <h3 className="text-lg font-bold">{t.category}</h3>
                   <p className={`text-2xl font-bold mt-1 tabular-nums ${t.type === "income" ? "text-green-500" : "text-red-500"}`}>
-                    {t.type === "income" ? "+" : "-"}
-                    {formatRupiah(t.amount)}
+                    {t.type === "income" ? "+" : "-"}{formatRupiah(t.amount)}
                   </p>
                 </div>
 

@@ -394,3 +394,10 @@ export async function settleDebt(userId: string, id: string, walletName: string)
     notes: `Pelunasan ${debt.type === "debt" ? "hutang ke" : "piutang dari"} ${debt.personName}`,
   });
 }
+
+export async function deleteMultipleTransactions(userId: string, ids: string[]) {
+  const items = await getTransactions(userId);
+  const updated = items.filter((t) => !ids.includes(t.id));
+  await saveTransactions(userId, updated);
+  revalidateTag("transactions", "max");
+}
