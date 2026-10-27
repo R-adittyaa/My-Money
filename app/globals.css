@@ -32,47 +32,19 @@ select option {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* =========================================
-   ANIMASI GLOBAL
-   ========================================= */
-
-/* 1. Fade In buat halaman (main) */
-@keyframes fadeInPage {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-main {
-  animation: fadeInPage 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* 2. Efek Tekan Tombol (Biar kerasa kayak native app) */
-button, a {
+/* Efek Tekan Tombol Global */
+button {
   -webkit-tap-highlight-color: transparent;
 }
-
-button:active, 
-a:active {
-  transform: scale(0.96);
-  transition: transform 0.1s ease;
+button:active {
+  transform: scale(0.97);
+  transition: transform 0.1s;
 }
 
-/* 3. Animasi Slide dari Bawah (Buat Bottom Nav / Modal) */
+/* Animasi Slide dari Bawah (Buat Modal/Bottom Nav) */
 @keyframes slideInBottom {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .animate-in {
@@ -83,16 +55,10 @@ a:active {
   animation-name: slideInBottom;
 }
 
-/* 4. Animasi Zoom In (Buat Modal Center) */
+/* Animasi Zoom In (Buat Modal) */
 @keyframes zoomInModal {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .zoom-in-95 {

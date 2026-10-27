@@ -116,11 +116,13 @@ export default async function TransaksiPage({
 
   const grouped = transactions.reduce<Record<string, typeof transactions>>(
     (acc, t) => {
-      (acc[t.date] ||= []).push(t);
+      const dateOnly = t.date.slice(0, 10); 
+      (acc[dateOnly] ||= []).push(t);
       return acc;
     },
     {}
   );
+  
   const sortedDates = Object.keys(grouped).sort((a, b) => {
     if (sort === "oldest") return a.localeCompare(b);
     return b.localeCompare(a);
@@ -132,7 +134,14 @@ export default async function TransaksiPage({
     params.cat ||
     (params.sort && params.sort !== "newest");
 
-  // ==== SERVER ACTION: TAMBAH TRANSAKSI ====
+  const totalMonthIncome = transactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalMonthExpense = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
+
   async function handleAdd(formData: FormData) {
     "use server";
     const session = await auth();
@@ -155,7 +164,6 @@ export default async function TransaksiPage({
       notes: ((formData.get("notes") as string) || "").trim(),
     });
 
-    // Cek Budget
     let warningMessage = "";
     if (type === "expense") {
       const budgets = await getBudgets(session.user.id);
@@ -180,7 +188,6 @@ export default async function TransaksiPage({
     if (warningMessage) throw new Error(warningMessage);
   }
 
-  // ==== SERVER ACTION: HAPUS ====
   async function handleDelete(formData: FormData) {
     "use server";
     const session = await auth();
@@ -190,7 +197,6 @@ export default async function TransaksiPage({
     revalidatePath("/");
   }
 
-  // ==== SERVER ACTION: EDIT ====
   async function handleUpdate(formData: FormData) {
     "use server";
     const session = await auth();
@@ -216,7 +222,6 @@ export default async function TransaksiPage({
     revalidatePath("/");
   }
 
-  // ==== SERVER ACTION: KATEGORI ====
   async function handleAddCategory(name: string, type: "income" | "expense") {
     "use server";
     const session = await auth();
@@ -243,13 +248,11 @@ export default async function TransaksiPage({
     revalidatePath("/transaksi");
   }
 
-  // ==== SERVER ACTION: DOMPET ====
   async function handleAddWallet(name: string) {
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
     const wallets = await getWallets(session.user.id);
-    // Default saldo 0 buat nambah dompet dari form transaksi
     await saveWallets(session.user.id, [...wallets, { id: crypto.randomUUID(), name, initialBalance: 0 }]);
     revalidatePath("/transaksi");
   }
@@ -260,7 +263,6 @@ export default async function TransaksiPage({
     if (!session?.user?.id) throw new Error("Unauthorized");
     const wallets = await getWallets(session.user.id);
     const target = wallets.find(w => w.id === id);
-    // Panggil dengan 4 argumen (id, name, initialBalance)
     await updateWallet(session.user.id, id, name, target?.initialBalance || 0);
     revalidatePath("/transaksi");
   }
@@ -275,7 +277,7 @@ export default async function TransaksiPage({
   }
 
   return (
-    <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-4 max-w-4xl mx-auto lg:mx-0">
+    <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-4 max-w-4xl mx-auto lg:mx-0 pb-20">
       <div className="flex items-center gap-2">
         <span className="w-1 h-5 bg-red-600 rounded-full"></span>
         <h1 className="text-lg font-bold">Transaksi</h1>
@@ -326,7 +328,7 @@ export default async function TransaksiPage({
 
       <FilterBar categories={categories} currentMonth={activeMonth} />
 
-      <section className="space-y-4">
+      <section className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
             <span className="w-1 h-4 bg-red-600 rounded-full"></span>
@@ -350,22 +352,55 @@ export default async function TransaksiPage({
 
         {sortedDates.map((date) => {
           const items = grouped[date];
-          const dayTotal = items.reduce(
-            (sum, t) => sum + (t.type === "income" ? t.amount : -t.amount),
-            0
-          );
+          
+          const dayIncome = items.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
+          const dayExpense = items.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+          const dayNet = dayIncome - dayExpense;
+
           return (
-            <div key={date} className="space-y-2">
-              <div className="flex justify-between items-baseline px-1">
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+            <div key={date} className="space-y-3">
+              
+              {/* HEADER TANGGAL & RINGKASAN HARIAN (PREMIUM LOOK) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 dark:bg-gray-800/30 p-3 rounded-xl border border-gray-100 dark:border-gray-800/60">
+                <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   {formatTanggal(date)}
                 </p>
-                <p className={`text-xs font-semibold tabular-nums ${dayTotal >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                  {dayTotal >= 0 ? "+" : ""}
-                  {formatRupiah(dayTotal)}
-                </p>
+                
+                <div className="flex items-center gap-2 text-[10px] font-medium flex-wrap">
+                  {/* Pemasukan */}
+                  {dayIncome > 0 && (
+                    <span className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-md">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l5-5 5 5M7 7l5 5 5-5"/></svg>
+                      {formatRupiah(dayIncome)}
+                    </span>
+                  )}
+                  
+                  {/* Tanda Minus */}
+                  {dayIncome > 0 && dayExpense > 0 && <span className="text-gray-400 font-bold">-</span>}
+                  
+                  {/* Pengeluaran */}
+                  {dayExpense > 0 && (
+                    <span className="flex items-center gap-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-1 rounded-md">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M17 7l-5 5-5-5M17 17l-5-5-5 5"/></svg>
+                      {formatRupiah(dayExpense)}
+                    </span>
+                  )}
+                  
+                  {/* Tanda Sama Dengan */}
+                  {(dayIncome > 0 || dayExpense > 0) && <span className="text-gray-400 font-bold">=</span>}
+                  
+                  {/* Total Bersih */}
+                  <span className={`px-2.5 py-1 rounded-md font-bold text-xs shadow-sm ${
+                    dayNet >= 0 
+                      ? "bg-gradient-to-r from-green-500 to-green-600 text-white" 
+                      : "bg-gradient-to-r from-red-500 to-red-600 text-white"
+                  }`}>
+                    {formatRupiah(dayNet)}
+                  </span>
+                </div>
               </div>
 
+              {/* LIST TRANSAKSI DALAM 1 HARI */}
               <ul className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden shadow-sm">
                 {items.map((t) => (
                   <TransactionDetail
@@ -381,6 +416,33 @@ export default async function TransaksiPage({
           );
         })}
       </section>
+
+      {/* TOTALAN BULANAN (Premium Card) */}
+      {transactions.length > 0 && (
+        <div className="mt-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black p-5 text-white shadow-xl relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-red-500/20 rounded-full blur-2xl"></div>
+          
+          <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-4 text-center font-semibold">
+            Total Keseluruhan {hasFilter ? "(Hasil Filter)" : "Bulan Ini"}
+          </p>
+          <div className="grid grid-cols-3 gap-2 text-center divide-x divide-white/10">
+            <div>
+              <p className="text-[10px] text-green-400 mb-1">Masuk</p>
+              <p className="text-sm font-bold tabular-nums">{formatRupiah(totalMonthIncome)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-red-400 mb-1">Keluar</p>
+              <p className="text-sm font-bold tabular-nums">{formatRupiah(totalMonthExpense)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-300 mb-1">Selisih</p>
+              <p className={`text-sm font-bold tabular-nums ${totalMonthIncome - totalMonthExpense >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {formatRupiah(totalMonthIncome - totalMonthExpense)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
