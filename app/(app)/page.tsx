@@ -236,12 +236,17 @@ export default async function DashboardPage() {
           <ul className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden shadow-sm">
             {recentTransactions.map((t) => (
               <TransactionDetail
-                key={t.id}
-                transaction={t}
-                categoryIcon={categoryIcon(t.category)}
-                onDelete={handleDelete}
-                onUpdate={handleUpdate}
-              />
+  key={t.id}
+  transaction={t}
+  categoryIcon={categoryIcon(t.category)}
+  onDelete={handleDelete}
+  onUpdate={handleUpdate}
+  // Tambahin 4 baris ini biar TypeScript seneng
+  isSelecting={false}
+  isSelected={false}
+  onToggleSelect={() => {}}
+  onStartSelecting={() => {}}
+/>
             ))}
           </ul>
         )}
