@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import DeleteButton from "./DeleteButton";
 
@@ -20,11 +19,11 @@ type Props = {
   categoryIcon: string;
   onDelete: (formData: FormData) => Promise<void>;
   onUpdate: (formData: FormData) => Promise<void>;
-  // Props buat Multi-Select
-  isSelecting: boolean;
-  isSelected: boolean;
-  onToggleSelect: (id: string) => void;
-  onStartSelecting: (id: string) => void;
+  // Dibikin opsional (?) biar Dashboard gak wajib ngirim
+  isSelecting?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
+  onStartSelecting?: (id: string) => void;
 };
 
 export default function TransactionDetail({
@@ -32,18 +31,41 @@ export default function TransactionDetail({
   categoryIcon,
   onDelete,
   onUpdate,
-  isSelecting,
-  isSelected,
+  isSelecting = false, // Default value
+  isSelected = false,
   onToggleSelect,
   onStartSelecting,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, setIsPending] = useState(false);
-  const [showContextMenu, setShowContextMenu] = useState(false); // Buat Long Press Menu (jika ada)
   
   const formRef = useRef<HTMLFormElement>(null);
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
+
+  function handlePressStart() {
+    if (isSelecting) return; 
+    pressTimer.current = setTimeout(() => {
+      if (onStartSelecting) onStartSelecting(t.id); 
+      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(50);
+    }, 400);
+  }
+
+  function handlePressEnd() {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+  }
+
+  function handleClick() {
+    if (isSelecting) {
+      if (onToggleSelect) onToggleSelect(t.id);
+    } else {
+      setIsOpen(true);
+    }
+  }
+
+  useEffect(() => {
+    return () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
+  }, []);
 
   const formatRupiah = (n: number) => {
     const sign = n < 0 ? "-" : "";
@@ -79,44 +101,8 @@ export default function TransactionDetail({
     setTimeout(() => setIsEditing(false), 300);
   }
 
-  // --- LOGIKA LONG PRESS MULTI-SELECT ---
-  function handlePressStart() {
-    if (isSelecting) return; // Kalau udah di mode milih, long press dimatiin
-    pressTimer.current = setTimeout(() => {
-      // Nembak event custom ke BulkActionBar
-      window.dispatchEvent(new CustomEvent("tx-start-select", { detail: t.id }));
-      
-      // Panggil prop fungsi kalau lu gak pake custom event
-      if (onStartSelecting) onStartSelecting(t.id);
-
-      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(50);
-    }, 400); // 400ms hold
-  }
-
-  function handlePressEnd() {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
-  }
-
-  function handleClick() {
-    if (isSelecting) {
-      // Kalau lagi milih, klik = centang
-      window.dispatchEvent(new CustomEvent("tx-select", { detail: t.id }));
-      if (onToggleSelect) onToggleSelect(t.id);
-    } else {
-      // Kalau gak milih, klik = buka detail
-      setIsOpen(true);
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      if (pressTimer.current) clearTimeout(pressTimer.current);
-    };
-  }, []);
-
   return (
     <>
-      {/* AREA TRANSAKSI (Bisa Diklik / Ditahan) */}
       <li
         onMouseDown={handlePressStart}
         onMouseUp={handlePressEnd}
@@ -126,12 +112,9 @@ export default function TransactionDetail({
         onClick={handleClick}
         onContextMenu={(e) => e.preventDefault()} 
         className={`p-3 flex items-center gap-3 cursor-pointer select-none transition-colors relative ${
-          isSelected 
-            ? "bg-red-50 dark:bg-red-950/30" 
-            : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          isSelected ? "bg-red-50 dark:bg-red-950/30" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
         }`}
       >
-        {/* CHECKBOX (Cuma muncul pas mode milih) */}
         {isSelecting && (
           <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
             isSelected ? "bg-red-500 border-red-500" : "border-gray-300 dark:border-gray-600"
@@ -156,13 +139,11 @@ export default function TransactionDetail({
         </p>
       </li>
 
-      {/* --- MODAL DETAIL --- */}
+      {/* MODAL DETAIL */}
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeModal} />
-
           <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            
             {!isEditing ? (
               <>
                 <div className="text-center mb-6">
@@ -174,7 +155,6 @@ export default function TransactionDetail({
                     {t.type === "income" ? "+" : "-"}{formatRupiah(t.amount)}
                   </p>
                 </div>
-
                 <div className="space-y-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500 dark:text-gray-400">Tipe</span>
@@ -193,7 +173,6 @@ export default function TransactionDetail({
                     <span className="font-medium whitespace-pre-wrap leading-relaxed">{t.notes || "-"}</span>
                   </div>
                 </div>
-
                 <div className="flex gap-2">
                   <button onClick={() => setIsEditing(true)} className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition">
                     Edit

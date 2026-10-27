@@ -3,7 +3,7 @@ import {
   processRecurring, getBudgets, updateTransaction,
   getCategories, saveCategories, updateCategory,
   getWallets, saveWallets, updateWallet,
-  deleteMultipleTransactions // <-- Import fungsi baru
+  deleteMultipleTransactions 
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -11,7 +11,7 @@ import { revalidatePath } from "next/cache";
 import FilterBar from "@/components/FilterBar";
 import TransactionForm from "@/components/TransactionForm";
 import TransactionDetail from "@/components/TransactionDetail";
-import BulkActionBar from "@/components/BulkActionBar"; // <-- Komponen baru
+import BulkActionBar from "@/components/BulkActionBar";
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
@@ -310,11 +310,7 @@ export default async function TransaksiPage({
                     categoryIcon={categoryIcon(t.category)}
                     onDelete={handleDelete}
                     onUpdate={handleUpdate}
-                    // Props Multi Select
-                    isSelecting={false}
-                    isSelected={false}
-                    onToggleSelect={() => {}}
-                    onStartSelecting={() => {}}
+                    // 4 Props fungsi DIHAPUS, biar gak error Server Component
                   />
                 ))}
               </ul>

@@ -100,7 +100,6 @@ export default async function DashboardPage() {
     revalidatePath("/");
   }
 
-  // BENERIN BAGIAN INI
   async function handleUpdate(formData: FormData) {
     "use server";
     const session = await auth();
@@ -109,7 +108,7 @@ export default async function DashboardPage() {
     const amount = Number(formData.get("amount"));
     const type = formData.get("type") as "income" | "expense";
     const category = (formData.get("category") as string).trim();
-    const wallet = (formData.get("wallet") as string)?.trim() || "Tunai"; // <-- Tambahan
+    const wallet = (formData.get("wallet") as string)?.trim() || "Tunai";
     const date = formData.get("date") as string;
 
     if (!id || !amount || !category) throw new Error("Data tidak lengkap");
@@ -119,7 +118,7 @@ export default async function DashboardPage() {
       amount,
       type,
       category,
-      wallet, // <-- Tambahan
+      wallet,
       notes: ((formData.get("notes") as string) || "").trim(),
     });
     revalidatePath("/");
@@ -236,17 +235,13 @@ export default async function DashboardPage() {
           <ul className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden shadow-sm">
             {recentTransactions.map((t) => (
               <TransactionDetail
-  key={t.id}
-  transaction={t}
-  categoryIcon={categoryIcon(t.category)}
-  onDelete={handleDelete}
-  onUpdate={handleUpdate}
-  // Tambahin 4 baris ini biar TypeScript seneng
-  isSelecting={false}
-  isSelected={false}
-  onToggleSelect={() => {}}
-  onStartSelecting={() => {}}
-/>
+                key={t.id}
+                transaction={t}
+                categoryIcon={categoryIcon(t.category)}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+                // Props fungsi DIHAPUS TOTAL biar gak error
+              />
             ))}
           </ul>
         )}
