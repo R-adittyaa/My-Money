@@ -401,3 +401,12 @@ export async function deleteMultipleTransactions(userId: string, ids: string[]) 
   await saveTransactions(userId, updated);
   revalidateTag("transactions", "max");
 }
+
+export async function updateMultipleCategories(userId: string, ids: string[], newCategory: string) {
+  const items = await getTransactions(userId);
+  const updated = items.map((t) => 
+    ids.includes(t.id) ? { ...t, category: newCategory } : t
+  );
+  await saveTransactions(userId, updated);
+  revalidateTag("transactions", "max");
+}

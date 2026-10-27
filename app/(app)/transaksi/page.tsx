@@ -3,7 +3,8 @@ import {
   processRecurring, getBudgets, updateTransaction,
   getCategories, saveCategories, updateCategory,
   getWallets, saveWallets, updateWallet,
-  deleteMultipleTransactions 
+  deleteMultipleTransactions,
+  updateMultipleCategories // <-- Tambahan
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -103,6 +104,7 @@ export default async function TransaksiPage({
   const totalMonthIncome = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
   const totalMonthExpense = transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
 
+  // ==== SERVER ACTION: TAMBAH ====
   async function handleAdd(formData: FormData) {
     "use server";
     const session = await auth();
@@ -137,6 +139,7 @@ export default async function TransaksiPage({
     if (warningMessage) throw new Error(warningMessage);
   }
 
+  // ==== SERVER ACTION: HAPUS ====
   async function handleDelete(formData: FormData) {
     "use server";
     const session = await auth();
@@ -145,6 +148,7 @@ export default async function TransaksiPage({
     revalidatePath("/transaksi"); revalidatePath("/");
   }
 
+  // ==== SERVER ACTION: EDIT ====
   async function handleUpdate(formData: FormData) {
     "use server";
     const session = await auth();
@@ -163,6 +167,7 @@ export default async function TransaksiPage({
     revalidatePath("/transaksi"); revalidatePath("/");
   }
 
+  // ==== SERVER ACTION: BULK DELETE ====
   async function handleBulkDelete(ids: string[]) {
     "use server";
     const session = await auth();
@@ -171,6 +176,16 @@ export default async function TransaksiPage({
     revalidatePath("/transaksi"); revalidatePath("/");
   }
 
+  // ==== SERVER ACTION: BULK EDIT ====
+  async function handleBulkEdit(ids: string[], newCategory: string) {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    await updateMultipleCategories(session.user.id, ids, newCategory);
+    revalidatePath("/transaksi"); revalidatePath("/");
+  }
+
+  // ==== SERVER ACTION: KATEGORI & DOMPET ====
   async function handleAddCategory(name: string, type: "income" | "expense") {
     "use server";
     const session = await auth();
@@ -282,7 +297,11 @@ export default async function TransaksiPage({
           </div>
         )}
 
-        <BulkActionBar onBulkDelete={handleBulkDelete} />
+        {/* PANGGIL BULK ACTION BAR DENGAN 2 FUNGSI */}
+        <BulkActionBar 
+          onBulkDelete={handleBulkDelete} 
+          onBulkEdit={handleBulkEdit} 
+        />
 
         {sortedDates.map((date) => {
           const items = grouped[date];
@@ -310,7 +329,6 @@ export default async function TransaksiPage({
                     categoryIcon={categoryIcon(t.category)}
                     onDelete={handleDelete}
                     onUpdate={handleUpdate}
-                    // 4 Props fungsi DIHAPUS, biar gak error Server Component
                   />
                 ))}
               </ul>
