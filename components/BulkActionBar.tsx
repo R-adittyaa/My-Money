@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 type Props = {
   onBulkDelete: (ids: string[]) => Promise<void>;
-  onBulkEdit: (ids: string[], newCategory: string) => Promise<void>;
+  onBulkEdit: (ids: string[], updates: { category?: string; wallet?: string }) => Promise<void>;
 };
 
 export default function BulkActionBar({ onBulkDelete, onBulkEdit }: Props) {
@@ -13,9 +13,10 @@ export default function BulkActionBar({ onBulkDelete, onBulkEdit }: Props) {
   const [isSelecting, setIsSelecting] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // State buat modal Edit Kategori
+  // State Modal Edit
   const [showEditModal, setShowEditModal] = useState(false);
-  const [newCat, setNewCat] = useState("");
+  const [editType, setEditType] = useState<"category" | "wallet">("category");
+  const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
     function handleSelect(e: any) {
@@ -53,13 +54,17 @@ export default function BulkActionBar({ onBulkDelete, onBulkEdit }: Props) {
 
   async function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!newCat.trim()) return;
+    if (!editValue.trim()) return;
     setLoading(true);
     try {
-      await onBulkEdit(selectedIds, newCat);
-      toast.success(`${selectedIds.length} transaksi diubah kategorinya`);
+      const updates = editType === "category" 
+        ? { category: editValue } 
+        : { wallet: editValue };
+        
+      await onBulkEdit(selectedIds, updates);
+      toast.success(`${selectedIds.length} transaksi diupdate`);
       setShowEditModal(false);
-      setNewCat("");
+      setEditValue("");
       window.dispatchEvent(new CustomEvent("tx-reset-select"));
     } catch {
       toast.error("Gagal edit");
@@ -103,20 +108,38 @@ export default function BulkActionBar({ onBulkDelete, onBulkEdit }: Props) {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowEditModal(false)} />
           <div className="relative w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-2xl animate-in zoom-in-95">
-            <h3 className="font-bold text-lg mb-4">Ubah Kategori Massal</h3>
-            <p className="text-xs text-gray-500 mb-3">Ubah kategori untuk {selectedIds.length} transaksi terpilih.</p>
+            <h3 className="font-bold text-lg mb-1">Edit Massal</h3>
+            <p className="text-xs text-gray-500 mb-4">Ubah data untuk {selectedIds.length} transaksi terpilih.</p>
             
             <form onSubmit={handleEditSubmit} className="space-y-4">
-              <input 
-                autoFocus
-                value={newCat}
-                onChange={(e) => setNewCat(e.target.value)}
-                placeholder="Kategori baru (Misal: Makan)"
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
-              />
-              <div className="flex gap-2">
+              <div>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Mau edit apa?</label>
+                <select
+                  value={editType}
+                  onChange={(e) => { setEditType(e.target.value as any); setEditValue(""); }}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                >
+                  <option value="category">Ubah Kategori</option>
+                  <option value="wallet">Ubah Dompet</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                  {editType === "category" ? "Nama Kategori Baru" : "Nama Dompet Baru"}
+                </label>
+                <input 
+                  autoFocus
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  placeholder={editType === "category" ? "Misal: Makan" : "Misal: BCA"}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm font-medium">Batal</button>
-                <button type="submit" disabled={loading || !newCat.trim()} className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50">Simpan</button>
+                <button type="submit" disabled={loading || !editValue.trim()} className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50">Simpan</button>
               </div>
             </form>
           </div>

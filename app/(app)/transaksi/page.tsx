@@ -4,7 +4,7 @@ import {
   getCategories, saveCategories, updateCategory,
   getWallets, saveWallets, updateWallet,
   deleteMultipleTransactions,
-  updateMultipleCategories // <-- Tambahan
+  bulkUpdateTransactions // <-- Tambahan
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -176,12 +176,12 @@ export default async function TransaksiPage({
     revalidatePath("/transaksi"); revalidatePath("/");
   }
 
-  // ==== SERVER ACTION: BULK EDIT ====
-  async function handleBulkEdit(ids: string[], newCategory: string) {
+  // ==== SERVER ACTION: BULK EDIT (Bisa Kategori / Dompet) ====
+  async function handleBulkEdit(ids: string[], updates: { category?: string; wallet?: string }) {
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
-    await updateMultipleCategories(session.user.id, ids, newCategory);
+    await bulkUpdateTransactions(session.user.id, ids, updates);
     revalidatePath("/transaksi"); revalidatePath("/");
   }
 
