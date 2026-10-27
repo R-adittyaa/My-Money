@@ -328,7 +328,7 @@ export default async function TransaksiPage({
 
       <FilterBar categories={categories} currentMonth={activeMonth} />
 
-      <section className="space-y-6">
+      <section className="space-y-6 mt-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
             <span className="w-1 h-4 bg-red-600 rounded-full"></span>
@@ -360,42 +360,30 @@ export default async function TransaksiPage({
           return (
             <div key={date} className="space-y-3">
               
-              {/* HEADER TANGGAL & RINGKASAN HARIAN (PREMIUM LOOK) */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 dark:bg-gray-800/30 p-3 rounded-xl border border-gray-100 dark:border-gray-800/60">
+              {/* HEADER TANGGAL & RINGKASAN (CARD STYLE) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gray-50 dark:bg-gray-800/40 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   {formatTanggal(date)}
                 </p>
                 
-                <div className="flex items-center gap-2 text-[10px] font-medium flex-wrap">
-                  {/* Pemasukan */}
+                <div className="flex items-center gap-2 text-[10px] sm:text-xs font-medium">
                   {dayIncome > 0 && (
-                    <span className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-md">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l5-5 5 5M7 7l5 5 5-5"/></svg>
-                      {formatRupiah(dayIncome)}
+                    <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-md">
+                      +{formatRupiah(dayIncome)}
                     </span>
                   )}
-                  
-                  {/* Tanda Minus */}
-                  {dayIncome > 0 && dayExpense > 0 && <span className="text-gray-400 font-bold">-</span>}
-                  
-                  {/* Pengeluaran */}
+                  {dayIncome > 0 && dayExpense > 0 && <span className="text-gray-400">/</span>}
                   {dayExpense > 0 && (
-                    <span className="flex items-center gap-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-1 rounded-md">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M17 7l-5 5-5-5M17 17l-5-5-5 5"/></svg>
-                      {formatRupiah(dayExpense)}
+                    <span className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-1 rounded-md">
+                      -{formatRupiah(dayExpense)}
                     </span>
                   )}
-                  
-                  {/* Tanda Sama Dengan */}
-                  {(dayIncome > 0 || dayExpense > 0) && <span className="text-gray-400 font-bold">=</span>}
-                  
-                  {/* Total Bersih */}
-                  <span className={`px-2.5 py-1 rounded-md font-bold text-xs shadow-sm ${
+                  <span className={`px-2.5 py-1 rounded-md font-bold shadow-sm ${
                     dayNet >= 0 
-                      ? "bg-gradient-to-r from-green-500 to-green-600 text-white" 
-                      : "bg-gradient-to-r from-red-500 to-red-600 text-white"
+                      ? "bg-green-600 text-white" 
+                      : "bg-red-600 text-white"
                   }`}>
-                    {formatRupiah(dayNet)}
+                    = {formatRupiah(dayNet)}
                   </span>
                 </div>
               </div>
@@ -417,11 +405,10 @@ export default async function TransaksiPage({
         })}
       </section>
 
-      {/* TOTALAN BULANAN (Premium Card) */}
+      {/* TOTALAN BULANAN (KOTAK HITAM ELEGAN) */}
       {transactions.length > 0 && (
         <div className="mt-10 rounded-2xl bg-gradient-to-br from-gray-900 to-black p-5 text-white shadow-xl relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-red-500/20 rounded-full blur-2xl"></div>
-          
           <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-4 text-center font-semibold">
             Total Keseluruhan {hasFilter ? "(Hasil Filter)" : "Bulan Ini"}
           </p>

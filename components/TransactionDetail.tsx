@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import DeleteButton from "./DeleteButton";
 
@@ -27,10 +28,13 @@ export default function TransactionDetail({
   onDelete,
   onUpdate,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // Buat Modal Detail
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [showContextMenu, setShowContextMenu] = useState(false); // Buat Long Press Menu
+  
   const formRef = useRef<HTMLFormElement>(null);
+  const pressTimer = useRef<NodeJS.Timeout | null>(null);
 
   const formatRupiah = (n: number) => {
     const sign = n < 0 ? "-" : "";
@@ -66,11 +70,42 @@ export default function TransactionDetail({
     setTimeout(() => setIsEditing(false), 300);
   }
 
+  // --- LOGIKA LONG PRESS ---
+  function handlePressStart() {
+    pressTimer.current = setTimeout(() => {
+      setShowContextMenu(true); // Buka menu pop-up
+      // Kasih getar dikit kalau di HP (opsional)
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 500); // 500ms = 0.5 detik
+  }
+
+  function handlePressEnd() {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+  }
+
+  // Batalin timernya kalau jari diangkat sebelum 500ms
+  useEffect(() => {
+    return () => {
+      if (pressTimer.current) clearTimeout(pressTimer.current);
+    };
+  }, []);
+
   return (
     <>
+      {/* AREA TRANSAKSI (Bisa Diklik / Ditahan) */}
       <li
-        onClick={() => setIsOpen(true)}
-        className="p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        onMouseDown={handlePressStart}
+        onMouseUp={handlePressEnd}
+        onMouseLeave={handlePressEnd}
+        onTouchStart={handlePressStart}
+        onTouchEnd={handlePressEnd}
+        onClick={() => { if (!showContextMenu) setIsOpen(true); }} // Klik normal buka detail
+        onContextMenu={(e) => e.preventDefault()} // Matiin menu klik kanan browser bawaan
+        className={`p-3 flex items-center gap-3 cursor-pointer select-none transition-colors relative ${
+          showContextMenu ? "bg-red-50 dark:bg-red-950/20" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+        }`}
       >
         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center text-base shrink-0">
           {categoryIcon}
@@ -93,6 +128,41 @@ export default function TransactionDetail({
         </p>
       </li>
 
+      {/* POP-UP MENU LONG PRESS (Muncul Melayang) */}
+      <AnimatePresence>
+        {showContextMenu && (
+          <>
+            {/* Overlay gelap transparan buat nutup menu */}
+            <div 
+              className="fixed inset-0 z-[90]" 
+              onClick={(e) => { e.stopPropagation(); setShowContextMenu(false); }} 
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="absolute z-[100] right-12 top-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl flex flex-col overflow-hidden w-32"
+            >
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowContextMenu(false); setIsOpen(true); setIsEditing(true); }}
+                className="px-3 py-2 text-xs text-left font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+              >
+                Edit Transaksi
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowContextMenu(false); }}
+                className="px-3 py-2 text-xs text-left font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition border-t border-gray-100 dark:border-gray-700"
+              >
+                {/* Kita suruh buka modal detail dulu biar hapusnya lewat modal (lebih aman) */}
+                Batal
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* --- MODAL DETAIL (Sama kayak sebelumnya) --- */}
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeModal} />
@@ -163,7 +233,7 @@ export default function TransactionDetail({
 
                 <input name="amount" type="number" min="0" step="any" defaultValue={t.amount} required placeholder="Jumlah" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
                 <input name="category" defaultValue={t.category} required placeholder="Kategori" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
-                <input name="wallet" defaultValue={t.wallet || "Tunai"} required placeholder="Dompet (Tunai/BCA/dll)" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
+                <input name="wallet" defaultValue={t.wallet || "Tunai"} required placeholder="Dompet" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
                 <input name="notes" defaultValue={t.notes} placeholder="Catatan (opsional)" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
 
                 <div className="flex gap-2 pt-2">
