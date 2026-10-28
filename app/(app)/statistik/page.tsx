@@ -12,12 +12,18 @@ export default async function StatistikPage({
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
+  // Next.js 16 searchParams itu Promise, jadi wajib di-await
   const params = await searchParams;
+  
+  // Ambil data dengan aman
   await processRecurring(userId);
   const all = await getTransactions(userId);
 
+  // Fallback ke bulan sekarang kalau data kosong
+  const defaultMonth = new Date().toISOString().slice(0, 7);
   const availableMonths = Array.from(new Set(all.map((t) => t.date.slice(0, 7)))).sort((a, b) => b.localeCompare(a));
-  const activeMonth = params.month || availableMonths[0] || new Date().toISOString().slice(0, 7);
+  const activeMonth = params.month || availableMonths[0] || defaultMonth;
+  
   const monthTransactions = all.filter((t) => t.date.startsWith(activeMonth));
 
   const monthLabel = new Date(activeMonth + "-01").toLocaleDateString("id-ID", {

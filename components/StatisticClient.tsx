@@ -13,11 +13,14 @@ type Props = {
 export default function StatisticClient({ transactions, monthLabel, activeMonth }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const totalIncome = transactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
-  const totalExpense = transactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+  // Pastiin transactions itu array, kalau undefined jadi array kosong
+  const safeTransactions = transactions || [];
+
+  const totalIncome = safeTransactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
+  const totalExpense = safeTransactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
 
   const expenseByCategory = Object.entries(
-    transactions.filter((t) => t.type === "expense").reduce<Record<string, number>>((acc, t) => {
+    safeTransactions.filter((t) => t.type === "expense").reduce<Record<string, number>>((acc, t) => {
         acc[t.category] = (acc[t.category] || 0) + t.amount;
         return acc;
       }, {})
@@ -30,7 +33,7 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
     return sign + "Rp " + Math.abs(n).toLocaleString("id-ID");
   };
 
-  const historyTransaksi = transactions.filter(
+  const historyTransaksi = safeTransactions.filter(
     (t) => t.category === selectedCategory && t.type === "expense"
   );
 
@@ -62,6 +65,7 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
 
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
         {expenseByCategory.map((cat, index) => {
+          // Pembagian aman (hindari NaN kalau totalExpense 0)
           const pct = totalExpense > 0 ? ((cat.value / totalExpense) * 100).toFixed(0) : "0";
           const isSelected = selectedCategory === cat.name;
 
