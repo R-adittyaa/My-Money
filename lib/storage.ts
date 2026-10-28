@@ -61,6 +61,26 @@ export async function deleteTransaction(userId: string, id: string) {
   revalidateTag("transactions", "max");
 }
 
+export async function deleteMultipleTransactions(userId: string, ids: string[]) {
+  const items = await getTransactions(userId);
+  const updated = items.filter((t) => !ids.includes(t.id));
+  await saveTransactions(userId, updated);
+  revalidateTag("transactions", "max");
+}
+
+export async function bulkUpdateTransactions(
+  userId: string, 
+  ids: string[], 
+  updates: { category?: string; wallet?: string; date?: string }
+) {
+  const items = await getTransactions(userId);
+  const updated = items.map((t) => 
+    ids.includes(t.id) ? { ...t, ...updates } : t
+  );
+  await saveTransactions(userId, updated);
+  revalidateTag("transactions", "max");
+}
+
 // ============ RECURRING ============
 
 export const getRecurring = unstable_cache(
@@ -363,6 +383,7 @@ export async function addDebt(userId: string, input: DebtInput) {
     ...input,
     id: crypto.randomUUID(),
     isPaid: false,
+    payments: [], // Init array kosong untuk cicilan
     createdAt: new Date().toISOString(),
   };
   items.unshift(newItem);
@@ -375,42 +396,47 @@ export async function deleteDebt(userId: string, id: string) {
   await saveDebts(userId, items.filter((d) => d.id !== id));
 }
 
-export async function settleDebt(userId: string, id: string, walletName: string) {
+export async function addDebtPayment(userId: string, debtId: string, amount: number, walletName: string) {
   const items = await getDebts(userId);
-  const debt = items.find((d) => d.id === id);
-  if (!debt || debt.isPaid) throw new Error("Hutang tidak ditemukan atau sudah lunas");
+  const debt = items.find((d) => d.id === debtId);
+  if (!debt || debt.isPaid) throw new Error("Data tidak ditemukan atau sudah lunas");
 
-  const updated = items.map((d) => (d.id === id ? { ...d, isPaid: true } : d));
+  const totalPaid = (debt.payments || []).reduce((sum, p) => sum + p.amount, 0);
+  const remaining = debt.amount - totalPaid;
+
+  if (amount > remaining) throw new Error(`Melebihi sisa hutang! Sisa: Rp ${remaining.toLocaleString("id-ID")}`);
+
+  const newPayment = {
+    id: crypto.randomUUID(),
+    amount,
+    date: new Date().toISOString(),
+    wallet: walletName,
+  };
+
+  const newTotalPaid = totalPaid + amount;
+  const isSettled = newTotalPaid >= debt.amount;
+
+  const updated = items.map((d) => {
+    if (d.id === debtId) {
+      return {
+        ...d,
+        isPaid: isSettled,
+        payments: [...(d.payments || []), newPayment],
+      };
+    }
+    return d;
+  });
+
   await saveDebts(userId, updated);
 
+  // Otomatis catat di Transaksi
   const txType = debt.type === "debt" ? "expense" : "income";
-  
   await addTransaction(userId, {
-    date: new Date().toISOString(),
-    amount: debt.amount,
+    date: newPayment.date,
+    amount,
     type: txType,
     category: debt.type === "debt" ? "Bayar Utang" : "Terima Piutang",
     wallet: walletName,
-    notes: `Pelunasan ${debt.type === "debt" ? "hutang ke" : "piutang dari"} ${debt.personName}`,
+    notes: `Cicilan ${debt.type === "debt" ? "hutang ke" : "piutang dari"} ${debt.personName}`,
   });
-}
-
-export async function deleteMultipleTransactions(userId: string, ids: string[]) {
-  const items = await getTransactions(userId);
-  const updated = items.filter((t) => !ids.includes(t.id));
-  await saveTransactions(userId, updated);
-  revalidateTag("transactions", "max");
-}
-
-export async function bulkUpdateTransactions(
-  userId: string, 
-  ids: string[], 
-  updates: { category?: string; wallet?: string; date?: string }
-) {
-  const items = await getTransactions(userId);
-  const updated = items.map((t) => 
-    ids.includes(t.id) ? { ...t, ...updates } : t
-  );
-  await saveTransactions(userId, updated);
-  revalidateTag("transactions", "max");
 }

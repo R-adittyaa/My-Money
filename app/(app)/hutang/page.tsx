@@ -1,4 +1,4 @@
-import { getDebts, addDebt, deleteDebt, settleDebt, getWallets } from "@/lib/storage";
+import { getDebts, addDebt, deleteDebt, addDebtPayment, getWallets } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -39,18 +39,26 @@ export default async function HutangPage() {
     revalidatePath("/hutang");
   }
 
-  async function handleSettle(formData: FormData) {
+  async function handlePay(formData: FormData) {
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
+    
     const id = formData.get("id") as string;
+    const amount = Number(formData.get("amount"));
     const wallet = formData.get("wallet") as string;
-    if (!wallet) throw new Error("Pilih dompet dulu");
 
-    await settleDebt(session.user.id, id, wallet);
-    revalidatePath("/hutang");
-    revalidatePath("/transaksi");
-    revalidatePath("/");
+    if (!wallet) return { error: "Pilih dompet dulu" };
+    
+    try {
+      await addDebtPayment(session.user.id, id, amount, wallet);
+      revalidatePath("/hutang");
+      revalidatePath("/transaksi");
+      revalidatePath("/");
+      return { success: true };
+    } catch (err: any) {
+      return { error: err.message };
+    }
   }
 
   return (
@@ -65,7 +73,7 @@ export default async function HutangPage() {
         wallets={wallets}
         onAdd={handleAdd}
         onDelete={handleDelete}
-        onSettle={handleSettle}
+        onPay={handlePay}
       />
     </main>
   );

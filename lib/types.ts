@@ -87,6 +87,13 @@ export type GoalInput = {
 // === HUTANG & PIUTANG ===
 export type DebtType = "debt" | "loan";
 
+export type DebtPayment = {
+  id: string;
+  amount: number;
+  date: string;
+  wallet: string;
+};
+
 export type Debt = {
   id: string;
   personName: string;
@@ -96,6 +103,7 @@ export type Debt = {
   isPaid: boolean;
   notes: string;
   createdAt: string;
+  payments: DebtPayment[]; // <-- Tambahan untuk cicilan
 };
 
-export type DebtInput = Omit<Debt, "id" | "isPaid" | "createdAt">;
+export type DebtInput = Omit<Debt, "id" | "isPaid" | "createdAt" | "payments">;
