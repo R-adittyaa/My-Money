@@ -11,7 +11,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import CategoryChart from "@/components/CategoryChart";
+import ChartKlien from "@/components/ChartKlien";
 import BudgetProgress from "@/components/BudgetProgress";
 import BudgetAlert from "@/components/BudgetAlert";
 import BalanceDisplay from "@/components/BalanceDisplay";
@@ -216,7 +216,7 @@ export default async function DashboardPage() {
               Lihat detail →
             </Link>
           </div>
-          <CategoryChart data={expenseByCategory} />
+<ChartKlien data={expenseByCategory} />
         </div>
       )}
 
