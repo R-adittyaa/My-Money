@@ -46,8 +46,6 @@ const renderCustomizedLabel = (props: any) => {
 };
 
 export default function ChartKlien({ data }: { data: Item[] }) {
-  const [activeIndex, setActiveIndex] = useState(-1);
-
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-sm text-gray-400 dark:text-gray-500">
@@ -65,24 +63,17 @@ export default function ChartKlien({ data }: { data: Item[] }) {
             cx="50%"
             cy="50%"
             innerRadius={60}
-            // BAGIAN YANG DIBENERIN: Pake optional chaining (?.) biar gak crash
-            outerRadius={(props: any) => {
-              const index = data.findIndex(d => d.name === props?.payload?.name);
-              return index === activeIndex ? 90 : 85;
-            }}
+            outerRadius={85} // <-- Angka statis, GAK PAKE FUNGSI, biar aman
             paddingAngle={2}
             dataKey="value"
             labelLine={false}
             label={renderCustomizedLabel}
-            onMouseEnter={(_, index) => setActiveIndex(index)}
-            onMouseLeave={() => setActiveIndex(-1)}
             stroke="none"
           >
             {data.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`} 
                 fill={COLORS[index % COLORS.length]} 
-                className="transition-all duration-300"
               />
             ))}
           </Pie>
