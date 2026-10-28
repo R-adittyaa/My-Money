@@ -177,14 +177,14 @@ export default async function TransaksiPage({
   }
 
   // ==== SERVER ACTION: BULK EDIT (Bisa Kategori / Dompet) ====
-  async function handleBulkEdit(ids: string[], updates: { category?: string; wallet?: string }) {
+   async function handleBulkEdit(ids: string[], updates: { category?: string; wallet?: string; date?: string }) {
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
     await bulkUpdateTransactions(session.user.id, ids, updates);
     revalidatePath("/transaksi"); revalidatePath("/");
   }
-
+  
   // ==== SERVER ACTION: KATEGORI & DOMPET ====
   async function handleAddCategory(name: string, type: "income" | "expense") {
     "use server";

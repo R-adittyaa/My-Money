@@ -402,11 +402,10 @@ export async function deleteMultipleTransactions(userId: string, ids: string[]) 
   revalidateTag("transactions", "max");
 }
 
-// Hapus fungsi updateMultipleCategories yang lama, ganti jadi ini:
 export async function bulkUpdateTransactions(
   userId: string, 
   ids: string[], 
-  updates: { category?: string; wallet?: string }
+  updates: { category?: string; wallet?: string; date?: string }
 ) {
   const items = await getTransactions(userId);
   const updated = items.map((t) => 

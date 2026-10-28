@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 type Props = {
   onBulkDelete: (ids: string[]) => Promise<void>;
-  onBulkEdit: (ids: string[], updates: { category?: string; wallet?: string }) => Promise<void>;
+  onBulkEdit: (ids: string[], updates: { category?: string; wallet?: string; date?: string }) => Promise<void>;
 };
 
 export default function BulkActionBar({ onBulkDelete, onBulkEdit }: Props) {
@@ -15,7 +15,7 @@ export default function BulkActionBar({ onBulkDelete, onBulkEdit }: Props) {
   
   // State Modal Edit
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editType, setEditType] = useState<"category" | "wallet">("category");
+  const [editType, setEditType] = useState<"category" | "wallet" | "date" | "time">("category");
   const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
@@ -54,13 +54,22 @@ export default function BulkActionBar({ onBulkDelete, onBulkEdit }: Props) {
 
   async function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!editValue.trim()) return;
+    if (!editValue) return;
     setLoading(true);
     try {
-      const updates = editType === "category" 
-        ? { category: editValue } 
-        : { wallet: editValue };
-        
+      let updates: any = {};
+      
+      if (editType === "category") updates = { category: editValue };
+      else if (editType === "wallet") updates = { wallet: editValue };
+      else if (editType === "date") {
+        // Ambil jam dari transaksi pertama biar gak ilang (fallback)
+        updates = { date: `${editValue}T12:00:00.000Z` }; // Default ke jam 12 siang
+      } else if (editType === "time") {
+        // Ambil tanggal hari ini sebagai default
+        const today = new Date().toISOString().slice(0, 10);
+        updates = { date: `${today}T${editValue}:00.000Z` };
+      }
+
       await onBulkEdit(selectedIds, updates);
       toast.success(`${selectedIds.length} transaksi diupdate`);
       setShowEditModal(false);
@@ -121,25 +130,31 @@ export default function BulkActionBar({ onBulkDelete, onBulkEdit }: Props) {
                 >
                   <option value="category">Ubah Kategori</option>
                   <option value="wallet">Ubah Dompet</option>
+                  <option value="date">Ubah Tanggal</option>
+                  <option value="time">Ubah Jam</option>
                 </select>
               </div>
 
               <div>
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                  {editType === "category" ? "Nama Kategori Baru" : "Nama Dompet Baru"}
+                  {editType === "category" && "Nama Kategori Baru"}
+                  {editType === "wallet" && "Nama Dompet Baru"}
+                  {editType === "date" && "Tanggal Baru"}
+                  {editType === "time" && "Jam Baru"}
                 </label>
                 <input 
                   autoFocus
+                  type={editType === "date" ? "date" : editType === "time" ? "time" : "text"}
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  placeholder={editType === "category" ? "Misal: Makan" : "Misal: BCA"}
+                  placeholder={editType === "category" ? "Misal: Makan" : editType === "wallet" ? "Misal: BCA" : ""}
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
                 />
               </div>
 
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm font-medium">Batal</button>
-                <button type="submit" disabled={loading || !editValue.trim()} className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50">Simpan</button>
+                <button type="submit" disabled={loading || !editValue} className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50">Simpan</button>
               </div>
             </form>
           </div>
