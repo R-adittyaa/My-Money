@@ -4,6 +4,8 @@ import {
   processRecurring,
   getBudgets,
   updateTransaction,
+  deleteMultipleTransactions,
+  bulkUpdateTransactions,
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -14,6 +16,7 @@ import BudgetProgress from "@/components/BudgetProgress";
 import BudgetAlert from "@/components/BudgetAlert";
 import BalanceDisplay from "@/components/BalanceDisplay";
 import TransactionDetail from "@/components/TransactionDetail";
+import BulkActionBar from "@/components/BulkActionBar"; // <-- Import Bulk Action
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
@@ -114,14 +117,27 @@ export default async function DashboardPage() {
     if (!id || !amount || !category) throw new Error("Data tidak lengkap");
 
     await updateTransaction(session.user.id, id, {
-      date,
-      amount,
-      type,
-      category,
-      wallet,
+      date, amount, type, category, wallet,
       notes: ((formData.get("notes") as string) || "").trim(),
     });
     revalidatePath("/");
+  }
+
+  // ==== BULK ACTIONS BUAT HOME ====
+  async function handleBulkDelete(ids: string[]) {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    await deleteMultipleTransactions(session.user.id, ids);
+    revalidatePath("/"); revalidatePath("/transaksi");
+  }
+
+  async function handleBulkEdit(ids: string[], updates: { category?: string; wallet?: string; date?: string }) {
+    "use server";
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    await bulkUpdateTransactions(session.user.id, ids, updates);
+    revalidatePath("/"); revalidatePath("/transaksi");
   }
 
   const monthLabel = now.toLocaleDateString("id-ID", {
@@ -130,7 +146,7 @@ export default async function DashboardPage() {
   });
 
   return (
-    <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0">
+    <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0 pb-24">
       {budgetStatuses.length > 0 && <BudgetAlert items={budgetStatuses} />}
 
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-5 sm:p-6 text-white shadow-lg">
@@ -240,12 +256,17 @@ export default async function DashboardPage() {
                 categoryIcon={categoryIcon(t.category)}
                 onDelete={handleDelete}
                 onUpdate={handleUpdate}
-                // Props fungsi DIHAPUS TOTAL biar gak error
               />
             ))}
           </ul>
         )}
       </section>
+
+      {/* BULK ACTION BAR BUAT HOME */}
+      <BulkActionBar 
+        onBulkDelete={handleBulkDelete} 
+        onBulkEdit={handleBulkEdit} 
+      />
     </main>
   );
 }
