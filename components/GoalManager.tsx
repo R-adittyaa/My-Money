@@ -14,10 +14,10 @@ type Goal = {
 
 type Props = {
   goals: Goal[];
-  onAdd: (formData: FormData) => Promise<void>;
-  onDelete: (formData: FormData) => Promise<void>;
-  onDeposit: (formData: FormData) => Promise<void>;
-  onWithdraw: (formData: FormData) => Promise<void>;
+  onAdd: (formData: FormData) => Promise<{ success?: boolean; error?: string }>;
+  onDelete: (formData: FormData) => Promise<{ success?: boolean; error?: string }>;
+  onDeposit: (formData: FormData) => Promise<{ success?: boolean; error?: string }>;
+  onWithdraw: (formData: FormData) => Promise<{ success?: boolean; error?: string }>;
 };
 
 export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithdraw }: Props) {
@@ -26,34 +26,36 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
   const [actionType, setActionType] = useState<"deposit" | "withdraw" | "history" | null>(null);
 
   async function handleAdd(formData: FormData) {
-    try {
-      await onAdd(formData);
+    const res = await onAdd(formData);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
       toast.success("Target ditambahkan");
       setShowForm(false);
-    } catch { toast.error("Gagal tambah target"); }
+    }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Hapus target ini? Semua riwayat nabung akan hilang.")) return;
     const fd = new FormData(); fd.set("id", id);
-    try {
-      await onDelete(fd);
-      toast.info("Target dihapus");
-    } catch { toast.error("Gagal hapus target"); }
+    const res = await onDelete(fd);
+    if (res?.error) toast.error(res.error);
+    else toast.info("Target dihapus");
   }
 
   async function handleActionSubmit(e: React.FormEvent<HTMLFormElement>, type: "deposit" | "withdraw") {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    try {
-      if (type === "deposit") await onDeposit(fd);
-      else await onWithdraw(fd);
-      
+    
+    const res = type === "deposit" ? await onDeposit(fd) : await onWithdraw(fd);
+    
+    if (res?.error) {
+      // Nampilin error yang rapi di Vercel
+      toast.error(res.error, { duration: 4000 });
+    } else {
       toast.success(type === "deposit" ? "Berhasil menabung!" : "Berhasil ditarik!");
       setActionId(null);
       setActionType(null);
-    } catch (err: any) {
-      toast.error(err.message || "Gagal memproses");
     }
   }
 
@@ -76,7 +78,7 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
 
       {showForm && (
         <form action={handleAdd} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 space-y-3">
-          <input name="title" required placeholder="Mau nabung buat apa? (Misal: Beli Laptop)" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
+          <input name="title" required placeholder="Mau nabung buat apa?" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
           <AmountInput name="targetAmount" required />
           <button type="submit" className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-2.5 rounded-lg text-sm transition">Simpan Target</button>
         </form>
@@ -97,10 +99,7 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
           ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return (
-            <div 
-              key={goal.id} 
-              className={`rounded-2xl bg-white dark:bg-gray-900 border p-5 shadow-sm relative overflow-hidden flex flex-col ${isDone ? "border-green-500/50 bg-green-50/10 dark:bg-green-950/10" : "border-gray-200 dark:border-gray-800"}`}
-            >
+            <div key={goal.id} className={`rounded-2xl bg-white dark:bg-gray-900 border p-5 shadow-sm relative overflow-hidden flex flex-col ${isDone ? "border-green-500/50" : "border-gray-200 dark:border-gray-800"}`}>
               {isDone && <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">TERCAPAI 🎉</div>}
               
               <div className="flex justify-between items-start mb-4">
@@ -112,21 +111,15 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
               </div>
 
               <div className="mb-4">
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-                  Rp {collected.toLocaleString("id-ID")}
-                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">Rp {collected.toLocaleString("id-ID")}</p>
                 <div className="flex justify-between text-[10px] mt-1.5 font-medium">
                   <span className={isDone ? "text-green-600" : "text-red-600"}>{pct}% tercapai</span>
                   <span className="text-gray-400">Sisa Rp {(goal.targetAmount - collected).toLocaleString("id-ID")}</span>
                 </div>
               </div>
 
-              {/* Progress Bar CSS Standard */}
               <div className="h-2.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden mb-5">
-                <div 
-                  className={`h-full rounded-full ${isDone ? "bg-green-500" : "bg-red-500"}`} 
-                  style={{ width: `${pct}%` }}
-                />
+                <div className={`h-full rounded-full ${isDone ? "bg-green-500" : "bg-red-500"}`} style={{ width: `${pct}%` }} />
               </div>
 
               <div className="mt-auto">
@@ -139,7 +132,6 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                           <button onClick={() => { setActionId(null); setActionType(null); }} className="text-gray-400 hover:text-gray-700 text-xs">✕</button>
                         </div>
                         <div className="max-h-32 overflow-y-auto space-y-2 pr-1">
-                          {allHistory.length === 0 && <p className="text-[10px] text-gray-500 text-center py-2">Belum ada riwayat.</p>}
                           {allHistory.map((h) => (
                             <div key={h.id} className="flex justify-between items-center text-xs border-b border-gray-100 dark:border-gray-800 pb-1.5 last:border-0">
                               <div>
@@ -159,33 +151,19 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
                           <div className="flex-1">
                             <AmountInput name="amount" required />
                           </div>
-                          <button type="submit" className={`${actionType === "deposit" ? "bg-green-600" : "bg-red-600"} text-white px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap`}>
+                          <button type="submit" className={`${actionType === "deposit" ? "bg-green-600" : "bg-red-600"} text-white px-3 py-2 rounded-lg text-xs font-medium`}>
                             {actionType === "deposit" ? "Nabung" : "Tarik"}
                           </button>
                           <button type="button" onClick={() => { setActionId(null); setActionType(null); }} className="text-gray-400 text-xs px-1">✕</button>
                         </div>
-                        
-                        {actionType === "withdraw" && (
-                          <p className="text-[10px] text-gray-500 text-right mt-1">Sisa tabungan: Rp {collected.toLocaleString("id-ID")}</p>
-                        )}
                       </form>
                     )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
-                    <button 
-                      onClick={() => { setActionId(goal.id); setActionType("deposit"); }} 
-                      disabled={isDone}
-                      className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-green-500 hover:text-green-500 py-1.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isDone ? "Tercapai" : "+ Nabung"}
-                    </button>
-                    <button onClick={() => { setActionId(goal.id); setActionType("withdraw"); }} className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-red-500 hover:text-red-500 py-1.5 rounded-lg transition">
-                      - Tarik
-                    </button>
-                    <button onClick={() => { setActionId(goal.id); setActionType("history"); }} className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-blue-500 hover:text-blue-500 py-1.5 rounded-lg transition">
-                      Riwayat
-                    </button>
+                    <button onClick={() => { setActionId(goal.id); setActionType("deposit"); }} disabled={isDone} className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-green-500 hover:text-green-500 py-1.5 rounded-lg transition disabled:opacity-50">+ Nabung</button>
+                    <button onClick={() => { setActionId(goal.id); setActionType("withdraw"); }} className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-red-500 hover:text-red-500 py-1.5 rounded-lg transition">- Tarik</button>
+                    <button onClick={() => { setActionId(goal.id); setActionType("history"); }} className="text-[10px] font-medium border border-gray-300 dark:border-gray-700 hover:border-blue-500 hover:text-blue-500 py-1.5 rounded-lg transition">Riwayat</button>
                   </div>
                 )}
               </div>
@@ -193,14 +171,6 @@ export default function GoalManager({ goals, onAdd, onDelete, onDeposit, onWithd
           );
         })}
       </div>
-
-      {goals.length === 0 && !showForm && (
-        <div className="text-center py-20 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl">
-          <p className="text-4xl mb-3">🎯</p>
-          <p className="text-sm text-gray-500 font-medium">Belum ada target tabungan.</p>
-          <p className="text-xs text-gray-400 mt-1">Bikin target biar makin semangat nabung!</p>
-        </div>
-      )}
     </div>
   );
 }

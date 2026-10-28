@@ -20,56 +20,67 @@ export default async function GoalsPage() {
   async function handleAdd(formData: FormData) {
     "use server";
     const session = await auth();
-    if (!session?.user?.id) throw new Error("Unauthorized");
+    if (!session?.user?.id) return { error: "Unauthorized" };
     const title = (formData.get("title") as string).trim();
     const targetAmount = Number(formData.get("targetAmount"));
-    if (!title || targetAmount <= 0) throw new Error("Invalid input");
+    if (!title || targetAmount <= 0) return { error: "Data tidak valid" };
+    
     await addGoal(session.user.id, { title, targetAmount });
     revalidatePath("/goals");
+    return { success: true };
   }
 
   async function handleDelete(formData: FormData) {
     "use server";
     const session = await auth();
-    if (!session?.user?.id) throw new Error("Unauthorized");
+    if (!session?.user?.id) return { error: "Unauthorized" };
     await deleteGoal(session.user.id, formData.get("id") as string);
     revalidatePath("/goals");
+    return { success: true };
   }
 
   async function handleDeposit(formData: FormData) {
     "use server";
     const session = await auth();
-    if (!session?.user?.id) throw new Error("Unauthorized");
+    if (!session?.user?.id) return { error: "Unauthorized" };
     const goalId = formData.get("goalId") as string;
     const amount = Number(formData.get("amount"));
-    if (amount <= 0) throw new Error("Invalid amount");
+    if (amount <= 0) return { error: "Nominal harus lebih dari 0" };
+    
     await addGoalDeposit(session.user.id, goalId, amount);
     revalidatePath("/goals");
+    return { success: true };
   }
 
-    async function handleWithdraw(formData: FormData) {
+  // BAGIAN INI YANG KITA BENERIN
+  async function handleWithdraw(formData: FormData) {
     "use server";
     const session = await auth();
-    if (!session?.user?.id) throw new Error("Unauthorized");
+    if (!session?.user?.id) return { error: "Unauthorized" };
+    
     const goalId = formData.get("goalId") as string;
     const amount = Number(formData.get("amount"));
     
-    if (amount <= 0) throw new Error("Nominal harus lebih dari 0");
+    if (amount <= 0) return { error: "Nominal harus lebih dari 0" };
 
-    // Validasi biar gak narik lebih dari saldo tabungan
+    // Cek saldo dulu
     const goals = await getGoals(session.user.id);
     const goal = goals.find((g) => g.id === goalId);
     if (goal) {
       const collected = goal.deposits.reduce((sum, d) => sum + d.amount, 0) - 
                         (goal.withdrawals || []).reduce((sum, w) => sum + w.amount, 0);
       
+      // Kalo lebih besar, balikin ERROR (bukan throw)
       if (amount > collected) {
-        throw new Error(`Saldo tabungan gak cukup! Sisa tabungan cuma Rp ${collected.toLocaleString("id-ID")}`);
+        return { error: `Saldo tabungan gak cukup! Sisa cuma Rp ${collected.toLocaleString("id-ID")}` };
       }
+    } else {
+      return { error: "Target tidak ditemukan" };
     }
 
     await withdrawGoal(session.user.id, goalId, amount);
     revalidatePath("/goals");
+    return { success: true };
   }
 
   return (
