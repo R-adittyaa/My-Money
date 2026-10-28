@@ -4,14 +4,13 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Transaction } from "@/lib/types";
 
-// 1. IMPORT DINAMIS (Cegah error di server)
-const CategoryChart = dynamic(() => import("./CategoryChart"), { 
-  ssr: false, // Wajib false!
-  loading: () => <div className="h-[280px] w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl"></div>
+// Import dinamis biar gak error di server
+const ChartKlien = dynamic(() => import("./ChartKlien"), { 
+  ssr: false,
+  loading: () => <div className="h-[280px] w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
 });
 
-// 2. Import warnanya secara terpisah (karena komponennya udah di-dynamic)
-import { COLORS } from "./CategoryChart";
+import { COLORS } from "./ChartKlien";
 
 type Props = {
   transactions: Transaction[];
@@ -68,7 +67,7 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
 
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 pt-6 pb-2 px-2 shadow-sm">
         {/* 3. Panggil komponennya */}
-        <CategoryChart data={expenseByCategory} />
+<ChartKlien data={expenseByCategory} />
       </div>
 
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">

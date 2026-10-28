@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef } from "react";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
+  Chart as ChartJS,
+  ArcElement,
   Tooltip,
-} from "recharts";
+  Legend,
+} from "chart.js";
+import { Doughnut } from "react-chartjs-2";
+
+// Daftarkan modul Chart.js
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 export const COLORS = [
   "#ef4444", "#f97316", "#eab308", "#84cc16", "#22c55e",
@@ -16,36 +19,9 @@ export const COLORS = [
 
 type Item = { name: string; value: number };
 
-const renderCustomizedLabel = (props: any) => {
-  const { cx, cy, midAngle, innerRadius, outerRadius, percent, index, name } = props;
-  const RADIAN = Math.PI / 180;
-  const sin = Math.sin(-RADIAN * midAngle);
-  const cos = Math.cos(-RADIAN * midAngle);
-  const sx = cx + (outerRadius + 5) * cos;
-  const sy = cy + (outerRadius + 5) * sin;
-  const mx = cx + (outerRadius + 20) * cos;
-  const my = cy + (outerRadius + 20) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 15;
-  const ey = my;
-  const textAnchor = cos >= 0 ? "start" : "end";
-
-  if (percent < 0.03) return null;
-
-  return (
-    <g>
-      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={COLORS[index % COLORS.length]} fill="none" strokeWidth={1.5} />
-      <circle cx={ex} cy={ey} r={2} fill={COLORS[index % COLORS.length]} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} textAnchor={textAnchor} fill="#888" fontSize={11} fontWeight={500} dy={-4}>
-        {name}
-      </text>
-      <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} textAnchor={textAnchor} fill="#333" fontSize={12} fontWeight={700} dy={12} className="dark:fill-gray-100">
-        {(percent * 100).toFixed(1)}%
-      </text>
-    </g>
-  );
-};
-
 export default function ChartKlien({ data }: { data: Item[] }) {
+  const chartRef = useRef<any>(null);
+
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-sm text-gray-400 dark:text-gray-500">
@@ -54,36 +30,54 @@ export default function ChartKlien({ data }: { data: Item[] }) {
     );
   }
 
+  const chartData = {
+    labels: data.map((d) => d.name),
+    datasets: [
+      {
+        data: data.map((d) => d.value),
+        backgroundColor: data.map((_, i) => COLORS[i % COLORS.length]),
+        borderWidth: 0,
+        hoverOffset: 6, // Efek potongan chart membesar pas di-hover
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: "65%", // Bikin bolong tengahnya (Donut)
+    plugins: {
+      legend: {
+        display: false, // Kita sembunyiin legend bawah, karena udah ada list di bawahnya
+      },
+      tooltip: {
+        backgroundColor: "rgba(0,0,0,0.85)",
+        padding: 10,
+        cornerRadius: 8,
+        titleFont: { size: 12 },
+        bodyFont: { size: 13, weight: "bold" as const },
+        callbacks: {
+          label: function(context: any) {
+            let label = context.label || "";
+            let value = context.raw || 0;
+            return label + ": Rp " + value.toLocaleString("id-ID");
+          }
+        }
+      },
+    },
+  };
+
   return (
-    <div className="h-[280px] sm:h-[320px] w-full -mt-4">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={85} // <-- Angka statis, GAK PAKE FUNGSI, biar aman
-            paddingAngle={2}
-            dataKey="value"
-            labelLine={false}
-            label={renderCustomizedLabel}
-            stroke="none"
-          >
-            {data.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`} 
-                fill={COLORS[index % COLORS.length]} 
-              />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(v) => "Rp " + Number(v).toLocaleString("id-ID")}
-            contentStyle={{ background: "rgba(0,0,0,0.85)", border: "none", borderRadius: "8px", color: "white", fontSize: "12px" }}
-            itemStyle={{ color: "white" }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+    <div className="h-[280px] sm:h-[320px] w-full relative">
+      <Doughnut ref={chartRef} data={chartData} options={options} />
+      
+      {/* Angka Total di Tengah Donut */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <span className="text-[10px] text-gray-500 uppercase tracking-widest">Total</span>
+        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+          Rp {data.reduce((sum, d) => sum + d.value, 0).toLocaleString("id-ID")}
+        </span>
+      </div>
     </div>
   );
 }
