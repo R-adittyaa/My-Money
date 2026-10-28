@@ -1,8 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import CategoryChart, { COLORS } from "./CategoryChart";
+import dynamic from "next/dynamic";
 import { Transaction } from "@/lib/types";
+
+// 1. IMPORT DINAMIS (Cegah error di server)
+const CategoryChart = dynamic(() => import("./CategoryChart"), { 
+  ssr: false, // Wajib false!
+  loading: () => <div className="h-[280px] w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl"></div>
+});
+
+// 2. Import warnanya secara terpisah (karena komponennya udah di-dynamic)
+import { COLORS } from "./CategoryChart";
 
 type Props = {
   transactions: Transaction[];
@@ -13,7 +22,6 @@ type Props = {
 export default function StatisticClient({ transactions, monthLabel, activeMonth }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Pastiin transactions itu array, kalau undefined jadi array kosong
   const safeTransactions = transactions || [];
 
   const totalIncome = safeTransactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
@@ -47,7 +55,6 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
         <span className="text-xs font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">{monthLabel}</span>
       </div>
 
-      {/* HEADER: Pemasukan & Pengeluaran */}
       <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-200 dark:border-gray-800">
         <div>
           <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">Pendapatan</p>
@@ -60,12 +67,12 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
       </div>
 
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 pt-6 pb-2 px-2 shadow-sm">
+        {/* 3. Panggil komponennya */}
         <CategoryChart data={expenseByCategory} />
       </div>
 
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
         {expenseByCategory.map((cat, index) => {
-          // Pembagian aman (hindari NaN kalau totalExpense 0)
           const pct = totalExpense > 0 ? ((cat.value / totalExpense) * 100).toFixed(0) : "0";
           const isSelected = selectedCategory === cat.name;
 
