@@ -1,101 +1,103 @@
 "use client";
 
+import { useState } from "react";
 import {
   PieChart,
   Pie,
   Cell,
   ResponsiveContainer,
   Tooltip,
+  Sector,
 } from "recharts";
 
-// Palet warna yang lebih estetik (senada merah/oranye/hangat)
-const COLORS = [
-  "#ef4444", // Red
-  "#f97316", // Orange
-  "#f59e0b", // Amber
-  "#e11d48", // Rose
-  "#ea580c", // Dark Orange
-  "#d97706", // Dark Amber
-  "#be123c", // Dark Rose
-  "#c2410c", // Brown-ish
+export const COLORS = [
+  "#ef4444", "#f97316", "#eab308", "#84cc16", "#22c55e",
+  "#10b981", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899",
 ];
 
-type Item = {
-  name: string;
-  value: number;
+type Item = { name: string; value: number };
+
+const renderCustomizedLabel = (props: any) => {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent, index, name } = props;
+  const RADIAN = Math.PI / 180;
+  const sin = Math.sin(-RADIAN * midAngle);
+  const cos = Math.cos(-RADIAN * midAngle);
+  const sx = cx + (outerRadius + 5) * cos;
+  const sy = cy + (outerRadius + 5) * sin;
+  const mx = cx + (outerRadius + 20) * cos;
+  const my = cy + (outerRadius + 20) * sin;
+  const ex = mx + (cos >= 0 ? 1 : -1) * 15;
+  const ey = my;
+  const textAnchor = cos >= 0 ? "start" : "end";
+
+  if (percent < 0.03) return null;
+
+  return (
+    <g>
+      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={COLORS[index % COLORS.length]} fill="none" strokeWidth={1.5} />
+      <circle cx={ex} cy={ey} r={2} fill={COLORS[index % COLORS.length]} stroke="none" />
+      <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} textAnchor={textAnchor} fill="#888" fontSize={11} fontWeight={500} dy={-4}>
+        {name}
+      </text>
+      <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} textAnchor={textAnchor} fill="#333" fontSize={12} fontWeight={700} dy={12} className="dark:fill-gray-100">
+        {(percent * 100).toFixed(1)}%
+      </text>
+    </g>
+  );
+};
+
+// Pake tipe data apapun (any) biar gak merah di TypeScript
+const renderActiveShape = (props: any) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  return (
+    <g>
+      <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 6} startAngle={startAngle} endAngle={endAngle} fill={fill} />
+    </g>
+  );
 };
 
 export default function CategoryChart({ data }: { data: Item[] }) {
+  const [activeIndex, setActiveIndex] = useState(-1);
+
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-48 text-sm text-gray-400 dark:text-gray-500">
+      <div className="flex items-center justify-center h-64 text-sm text-gray-400 dark:text-gray-500">
         Belum ada data pengeluaran
       </div>
     );
   }
 
-  const total = data.reduce((sum, d) => sum + d.value, 0);
-
   return (
-    <div>
-      <div className="h-52 -mt-2">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              innerRadius={55} // Lubang tengah dibikin lebih gede (Donut Chart)
-              outerRadius={85}
-              paddingAngle={4} // Jarak antar potongan
-              stroke="none" // Hilangin garis luar
-              cornerRadius={6} // Bikin ujung potongan tumpul (modern)
-            >
-              {data.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip
-              formatter={(v) => "Rp " + Number(v).toLocaleString("id-ID")}
-              contentStyle={{
-                background: "rgba(0,0,0,0.85)",
-                border: "none",
-                borderRadius: "8px",
-                color: "white",
-                fontSize: "12px",
-                padding: "8px 12px",
-                boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-              }}
-              itemStyle={{ color: "white" }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-
-      <ul className="space-y-2 mt-4">
-        {data.slice(0, 6).map((d, i) => {
-          const pct = ((d.value / total) * 100).toFixed(1);
-          return (
-            <li key={d.name} className="flex items-center gap-3 text-xs">
-              <span
-                className="w-2.5 h-2.5 rounded-full shrink-0"
-                style={{ background: COLORS[i % COLORS.length] }}
-              />
-              <span className="flex-1 truncate text-gray-700 dark:text-gray-300 font-medium">
-                {d.name}
-              </span>
-              <span className="text-gray-400 dark:text-gray-500 tabular-nums text-[10px]">
-                {pct}%
-              </span>
-              <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
-                Rp {d.value.toLocaleString("id-ID")}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+    <div className="h-[280px] sm:h-[320px] w-full -mt-4">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            activeIndex={activeIndex}
+            activeShape={renderActiveShape}
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={85}
+            paddingAngle={2}
+            dataKey="value"
+            labelLine={false}
+            label={renderCustomizedLabel}
+            onMouseEnter={(_, index) => setActiveIndex(index)}
+            onMouseLeave={() => setActiveIndex(-1)}
+            stroke="none"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(v) => "Rp " + Number(v).toLocaleString("id-ID")}
+            contentStyle={{ background: "rgba(0,0,0,0.85)", border: "none", borderRadius: "8px", color: "white", fontSize: "12px" }}
+            itemStyle={{ color: "white" }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
     </div>
   );
 }
