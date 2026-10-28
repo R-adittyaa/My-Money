@@ -7,7 +7,6 @@ import {
   Cell,
   ResponsiveContainer,
   Tooltip,
-  Sector,
 } from "recharts";
 
 export const COLORS = [
@@ -46,16 +45,6 @@ const renderCustomizedLabel = (props: any) => {
   );
 };
 
-// Pake tipe data apapun (any) biar gak merah di TypeScript
-const renderActiveShape = (props: any) => {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-  return (
-    <g>
-      <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 6} startAngle={startAngle} endAngle={endAngle} fill={fill} />
-    </g>
-  );
-};
-
 export default function CategoryChart({ data }: { data: Item[] }) {
   const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -72,13 +61,16 @@ export default function CategoryChart({ data }: { data: Item[] }) {
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
-            activeIndex={activeIndex}
-            activeShape={renderActiveShape}
             data={data}
             cx="50%"
             cy="50%"
             innerRadius={60}
-            outerRadius={85}
+            // Kalau lagi di-hover, radius luarnya membesar 6px
+            outerRadius={(props: any) => {
+              // Recharts v3 ngasih props index lewat payload
+              const index = data.findIndex(d => d.name === props.payload.name);
+              return index === activeIndex ? 90 : 85;
+            }}
             paddingAngle={2}
             dataKey="value"
             labelLine={false}
@@ -88,7 +80,11 @@ export default function CategoryChart({ data }: { data: Item[] }) {
             stroke="none"
           >
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              <Cell 
+                key={`cell-${index}`} 
+                fill={COLORS[index % COLORS.length]} 
+                className="transition-all duration-300" // Tambahin animasi smooth
+              />
             ))}
           </Pie>
           <Tooltip
