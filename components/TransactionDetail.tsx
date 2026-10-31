@@ -12,6 +12,7 @@ type Transaction = {
   category: string;
   notes: string;
   wallet?: string;
+  location?: string; // <-- Tambahan Baru
 };
 
 type Props = {
@@ -37,15 +38,9 @@ export default function TransactionDetail({
   const formRef = useRef<HTMLFormElement>(null);
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Dengerin instruksi dari BulkActionBar
   useEffect(() => {
-    function handleStartMode() {
-      setIsSelectingMode(true);
-    }
-    function handleReset() {
-      setIsSelectingMode(false);
-      setIsSelected(false);
-    }
+    function handleStartMode() { setIsSelectingMode(true); }
+    function handleReset() { setIsSelectingMode(false); setIsSelected(false); }
 
     window.addEventListener("tx-start-select-mode", handleStartMode);
     window.addEventListener("tx-reset-select", handleReset);
@@ -59,14 +54,10 @@ export default function TransactionDetail({
   function handlePressStart() {
     if (isSelectingMode) return;
     pressTimer.current = setTimeout(() => {
-      // Masuk mode pilih
       setIsSelectingMode(true);
       setIsSelected(true);
-      
-      // Kabarin BulkActionBar
       window.dispatchEvent(new CustomEvent("tx-start-select-mode"));
       window.dispatchEvent(new CustomEvent("tx-select", { detail: t.id }));
-
       if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(50);
     }, 400);
   }
@@ -129,7 +120,6 @@ export default function TransactionDetail({
           isSelected ? "bg-red-50 dark:bg-red-950/30" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
         }`}
       >
-        {/* CHECKBOX MULTI-SELECT */}
         {isSelectingMode && (
           <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
             isSelected ? "bg-red-500 border-red-500" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
@@ -156,7 +146,6 @@ export default function TransactionDetail({
         </p>
       </li>
 
-      {/* MODAL DETAIL */}
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
@@ -172,6 +161,13 @@ export default function TransactionDetail({
                   <div className="flex justify-between text-sm"><span className="text-gray-500">Dompet</span><span className="font-medium">{t.wallet || "-"}</span></div>
                   <div className="flex justify-between text-sm"><span className="text-gray-500">Waktu</span><span className="font-medium text-right">{formatTanggal(t.date)}</span></div>
                   <div className="flex flex-col text-sm"><span className="text-gray-500 mb-1">Catatan</span><span className="font-medium">{t.notes || "-"}</span></div>
+                  {/* TAMPILIN LOKASI DI SINI */}
+                  {t.location && (
+                    <div className="flex flex-col text-sm border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+                      <span className="text-gray-500 mb-1">Lokasi</span>
+                      <span className="font-medium">{t.location}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setIsEditing(true)} className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 font-medium text-sm">Edit</button>
@@ -194,6 +190,7 @@ export default function TransactionDetail({
                 <input name="category" defaultValue={t.category} required placeholder="Kategori" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm" />
                 <input name="wallet" defaultValue={t.wallet || "Tunai"} required placeholder="Dompet" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm" />
                 <input name="notes" defaultValue={t.notes} placeholder="Catatan" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm" />
+                <input name="location" defaultValue={t.location} placeholder="Lokasi" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm" />
                 <div className="flex gap-2 pt-2">
                   <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 font-medium text-sm">Batal</button>
                   <button type="submit" disabled={isPending} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-medium text-sm disabled:opacity-50">Simpan</button>

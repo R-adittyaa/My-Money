@@ -44,17 +44,15 @@ export default function TransactionForm({
   const [isPending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
 
-  // State buat Date & Time biar otomatis ngikutin
   const [currentDate, setCurrentDate] = useState("");
   const [currentTime, setCurrentTime] = useState("");
-  const [isMounted, setIsMounted] = useState(false); // <-- Kunci anti-hydration
+  const [isMounted, setIsMounted] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedWallet, setSelectedWallet] = useState("");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
-  // Pas pertama kali render di browser, baru set jam & tanggal
   useEffect(() => {
     setIsMounted(true);
     const now = new Date();
@@ -88,7 +86,6 @@ export default function TransactionForm({
     });
   }
 
-  // Kalau belum mounted (masih di server), jangan render form dulu biar gak error
   if (!isMounted) {
     return <div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse"></div>;
   }
@@ -102,40 +99,19 @@ export default function TransactionForm({
           <h2 className="font-semibold text-sm">Tambah Transaksi</h2>
         </div>
 
-        {/* Date & Time */}
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
-              Tanggal <span className="text-red-500">*</span>
-            </label>
-            <input 
-              name="date" 
-              type="date" 
-              required 
-              value={currentDate}
-              onChange={(e) => setCurrentDate(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" 
-            />
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Tanggal <span className="text-red-500">*</span></label>
+            <input name="date" type="date" required value={currentDate} onChange={(e) => setCurrentDate(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
           </div>
           <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
-              Jam <span className="text-red-500">*</span>
-            </label>
-            <input 
-              name="time" 
-              type="time" 
-              required 
-              value={currentTime}
-              onChange={(e) => setCurrentTime(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" 
-            />
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Jam <span className="text-red-500">*</span></label>
+            <input name="time" type="time" required value={currentTime} onChange={(e) => setCurrentTime(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
           </div>
         </div>
 
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
-            Tipe <span className="text-red-500">*</span>
-          </label>
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Tipe <span className="text-red-500">*</span></label>
           <div className="grid grid-cols-2 gap-2">
             <label className="cursor-pointer">
               <input type="radio" name="type" value="expense" defaultChecked className="peer sr-only" />
@@ -149,75 +125,45 @@ export default function TransactionForm({
         </div>
 
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
-            Nominal <span className="text-red-500">*</span>
-          </label>
-<AmountInput name="amount" required autoFocus />
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Nominal <span className="text-red-500">*</span></label>
+          <AmountInput name="amount" required autoFocus />
         </div>
 
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
-            Kategori <span className="text-red-500">*</span>
-          </label>
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Kategori <span className="text-red-500">*</span></label>
           <input type="hidden" name="category" value={selectedCategory} />
-          <button
-            type="button"
-            onClick={() => setIsCategoryModalOpen(true)}
-            className={`w-full rounded-lg border px-3 py-2 text-sm text-left flex justify-between items-center transition ${
-              selectedCategory ? "border-red-500 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 font-medium" : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 hover:border-gray-400"
-            }`}
-          >
+          <button type="button" onClick={() => setIsCategoryModalOpen(true)} className={`w-full rounded-lg border px-3 py-2 text-sm text-left flex justify-between items-center transition ${selectedCategory ? "border-red-500 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 font-medium" : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 hover:border-gray-400"}`}>
             <span>{selectedCategory || "Pilih Kategori..."}</span>
             <span className="text-xs opacity-50">▼</span>
           </button>
         </div>
 
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
-            Sumber Dana <span className="text-red-500">*</span>
-          </label>
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Sumber Dana <span className="text-red-500">*</span></label>
           <input type="hidden" name="wallet" value={selectedWallet} />
-          <button
-            type="button"
-            onClick={() => setIsWalletModalOpen(true)}
-            className={`w-full rounded-lg border px-3 py-2 text-sm text-left flex justify-between items-center transition ${
-              selectedWallet ? "border-red-500 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 font-medium" : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 hover:border-gray-400"
-            }`}
-          >
+          <button type="button" onClick={() => setIsWalletModalOpen(true)} className={`w-full rounded-lg border px-3 py-2 text-sm text-left flex justify-between items-center transition ${selectedWallet ? "border-red-500 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 font-medium" : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 hover:border-gray-400"}`}>
             <span>{selectedWallet || "Pilih Dompet..."}</span>
             <span className="text-xs opacity-50">▼</span>
           </button>
         </div>
 
+        {/* CATATAN */}
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
-            Catatan <span className="text-gray-400 dark:text-gray-500">(opsional)</span>
-          </label>
-          <input name="notes" placeholder="Misal: Makan siang di warteg" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Catatan <span className="text-gray-400 dark:text-gray-500">(opsional)</span></label>
+          <input name="notes" placeholder="Misal: Makan siang" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
+        </div>
+
+        {/* LOKASI BARU */}
+        <div>
+          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Lokasi <span className="text-gray-400 dark:text-gray-500">(opsional)</span></label>
+          <input name="location" placeholder="Misal: Warteg Bahari / Gofood" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
         </div>
 
         <SubmitButton disabled={!selectedCategory || !selectedWallet} />
       </form>
 
-      <CategoryModal
-        isOpen={isCategoryModalOpen}
-        onClose={() => setIsCategoryModalOpen(false)}
-        categories={categories}
-        onSelect={(name) => setSelectedCategory(name)}
-        onAdd={onAddCategory}
-        onEdit={onEditCategory}
-        onDelete={onDeleteCategory}
-      />
-
-      <WalletModal
-        isOpen={isWalletModalOpen}
-        onClose={() => setIsWalletModalOpen(false)}
-        wallets={wallets}
-        onSelect={(name) => setSelectedWallet(name)}
-        onAdd={onAddWallet}
-        onEdit={onEditWallet}
-        onDelete={onDeleteWallet}
-      />
+      <CategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} categories={categories} onSelect={(name) => setSelectedCategory(name)} onAdd={onAddCategory} onEdit={onEditCategory} onDelete={onDeleteCategory} />
+      <WalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} wallets={wallets} onSelect={(name) => setSelectedWallet(name)} onAdd={onAddWallet} onEdit={onEditWallet} onDelete={onDeleteWallet} />
     </>
   );
 }

@@ -4,7 +4,7 @@ import {
   getCategories, saveCategories, updateCategory,
   getWallets, saveWallets, updateWallet,
   deleteMultipleTransactions,
-  bulkUpdateTransactions // <-- Tambahan
+  bulkUpdateTransactions
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -73,9 +73,15 @@ export default async function TransaksiPage({
   let transactions = monthTransactions;
   if (params.type && params.type !== "all") transactions = transactions.filter((t) => t.type === params.type);
   if (params.cat) transactions = transactions.filter((t) => t.category === params.cat);
+  
+  // FITUR PENCARIAN: Sekarang bisa nyari dari Lokasi juga
   if (params.q) {
     const q = params.q.toLowerCase();
-    transactions = transactions.filter((t) => t.category.toLowerCase().includes(q) || t.notes.toLowerCase().includes(q));
+    transactions = transactions.filter((t) => 
+      t.category.toLowerCase().includes(q) || 
+      t.notes.toLowerCase().includes(q) ||
+      (t.location && t.location.toLowerCase().includes(q))
+    );
   }
 
   const sort = params.sort || "newest";
@@ -116,11 +122,16 @@ export default async function TransaksiPage({
     const dateInput = formData.get("date") as string;
     const timeInput = formData.get("time") as string;
     const date = `${dateInput}T${timeInput}:00.000Z`;
+    const location = (formData.get("location") as string) || "";
 
     if (!amount || amount <= 0) throw new Error("Invalid amount");
     if (!wallet) throw new Error("Sumber dana wajib dipilih");
 
-    await addTransaction(session.user.id, { date, amount, type, category, wallet, notes: ((formData.get("notes") as string) || "").trim() });
+    await addTransaction(session.user.id, {
+      date, amount, type, category, wallet,
+      notes: ((formData.get("notes") as string) || "").trim(),
+      location: location.trim(),
+    });
 
     let warningMessage = "";
     if (type === "expense") {
@@ -161,9 +172,15 @@ export default async function TransaksiPage({
     const dateInput = formData.get("date") as string;
     const timeInput = formData.get("time") as string;
     const date = `${dateInput}T${timeInput}:00.000Z`;
+    const location = (formData.get("location") as string) || "";
 
     if (!id || !amount || !category || !wallet) throw new Error("Data tidak lengkap");
-    await updateTransaction(session.user.id, id, { date, amount, type, category, wallet, notes: ((formData.get("notes") as string) || "").trim() });
+    
+    await updateTransaction(session.user.id, id, { 
+      date, amount, type, category, wallet, 
+      notes: ((formData.get("notes") as string) || "").trim(),
+      location: location.trim(),
+    });
     revalidatePath("/transaksi"); revalidatePath("/");
   }
 
@@ -176,8 +193,8 @@ export default async function TransaksiPage({
     revalidatePath("/transaksi"); revalidatePath("/");
   }
 
-  // ==== SERVER ACTION: BULK EDIT (Bisa Kategori / Dompet) ====
-   async function handleBulkEdit(ids: string[], updates: { category?: string; wallet?: string; date?: string }) {
+  // ==== SERVER ACTION: BULK EDIT ====
+  async function handleBulkEdit(ids: string[], updates: { category?: string; wallet?: string; date?: string }) {
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
@@ -221,6 +238,7 @@ export default async function TransaksiPage({
     revalidatePath("/transaksi");
   }
 
+  // FUNGSI YANG TADI KEHAPUS
   async function handleEditWallet(id: string, name: string) {
     "use server";
     const session = await auth();
@@ -297,7 +315,6 @@ export default async function TransaksiPage({
           </div>
         )}
 
-        {/* PANGGIL BULK ACTION BAR DENGAN 2 FUNGSI */}
         <BulkActionBar 
           onBulkDelete={handleBulkDelete} 
           onBulkEdit={handleBulkEdit} 

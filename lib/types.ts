@@ -14,6 +14,7 @@ export type Transaction = {
   category: string;
   notes: string;
   wallet: string;
+  location?: string;
 };
 
 export type TransactionInput = Omit<Transaction, "id">;
