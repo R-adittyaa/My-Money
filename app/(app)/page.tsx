@@ -16,7 +16,9 @@ import BudgetProgress from "@/components/BudgetProgress";
 import BudgetAlert from "@/components/BudgetAlert";
 import BalanceDisplay from "@/components/BalanceDisplay";
 import TransactionDetail from "@/components/TransactionDetail";
-import BulkActionBar from "@/components/BulkActionBar"; // <-- Import Bulk Action
+import BulkActionBar from "@/components/BulkActionBar"; 
+import ShareDashboardButton from "@/components/ShareDashboardButton";
+
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
@@ -152,6 +154,13 @@ export default async function DashboardPage() {
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-5 sm:p-6 text-white shadow-lg">
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute -bottom-16 -left-16 w-52 h-52 rounded-full bg-black/10 blur-3xl" />
+
+        <ShareDashboardButton 
+    balance={balance} 
+    income={totalIncome} 
+    expense={totalExpense} 
+    monthLabel={monthLabel} 
+  />
         
         <div className="relative">
           <p className="text-xs uppercase tracking-widest opacity-80">
