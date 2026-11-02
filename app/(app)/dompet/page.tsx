@@ -8,7 +8,7 @@ import WalletManager from "@/components/WalletManager";
 export default async function DompetPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; new?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -18,33 +18,24 @@ export default async function DompetPage({
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const activeMonth = params.month || defaultMonth;
+  const isNew = params.new === "true"; // <-- Baca URL
 
   const [wallets, allTransactions] = await Promise.all([
     getWallets(userId),
     getTransactions(userId),
   ]);
 
-  // Ambil transaksi HANYA untuk bulan yang dipilih
   const monthTransactions = allTransactions.filter((t) => t.date.startsWith(activeMonth));
 
-  // LOGIKA MUTASI BULAN INI (RESET KE 0 TIAP BULAN)
   const walletBalances = wallets.map((w) => {
     const txsThisMonth = allTransactions.filter(
       (t) => t.wallet === w.name && t.date.startsWith(activeMonth)
     );
-    
     const incomeThisMonth = txsThisMonth.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
     const expenseThisMonth = txsThisMonth.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-
-    // Saldo Awal selalu 0 (karena ini mutasi bulan ini, bukan akumulasi)
     const startBalance = 0;
     const currentBalance = startBalance + incomeThisMonth - expenseThisMonth;
-
-    return { 
-      ...w, 
-      initialBalance: startBalance, 
-      currentBalance 
-    };
+    return { ...w, initialBalance: startBalance, currentBalance };
   });
 
   const totalBalance = walletBalances.reduce((sum, w) => sum + w.currentBalance, 0);
@@ -104,7 +95,6 @@ export default async function DompetPage({
         </div>
       </div>
 
-      {/* NAVIGASI BULAN */}
       {availableMonths.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {availableMonths.slice(0, 12).map((m) => {
@@ -123,6 +113,7 @@ export default async function DompetPage({
         wallets={walletBalances}
         monthTransactions={monthTransactions}
         activeMonth={activeMonth}
+        isNew={isNew} // <-- Kirim Prop
         onAdd={handleAdd}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
