@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Transaction } from "@/lib/types";
 
-// Import dinamis biar gak error di server
 const ChartKlien = dynamic(() => import("./ChartKlien"), { 
   ssr: false,
   loading: () => <div className="h-[280px] w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
@@ -44,6 +44,15 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
     (t) => t.category === selectedCategory && t.type === "expense"
   );
 
+  // LOGIKA NAVIGASI BULAN
+  const prevMonth = new Date(activeMonth + "-01");
+  prevMonth.setMonth(prevMonth.getMonth() - 1);
+  const prevMonthStr = prevMonth.toISOString().slice(0, 7);
+
+  const nextMonth = new Date(activeMonth + "-01");
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const nextMonthStr = nextMonth.toISOString().slice(0, 7);
+
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-4 max-w-4xl mx-auto lg:mx-0 pb-20">
       <div className="flex items-center justify-between">
@@ -51,7 +60,17 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
           <span className="w-1 h-5 bg-red-600 rounded-full"></span>
           <h1 className="text-lg font-bold">Statistik</h1>
         </div>
-        <span className="text-xs font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">{monthLabel}</span>
+        
+        {/* NAVIGASI BULAN DI SINI */}
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-full">
+          <Link href={`/statistik?month=${prevMonthStr}`} className="p-1.5 rounded-full hover:bg-white dark:hover:bg-gray-700 transition text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </Link>
+          <span className="text-xs font-medium px-1">{monthLabel}</span>
+          <Link href={`/statistik?month=${nextMonthStr}`} className="p-1.5 rounded-full hover:bg-white dark:hover:bg-gray-700 transition text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </Link>
+        </div>
       </div>
 
       <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-200 dark:border-gray-800">
@@ -66,8 +85,7 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
       </div>
 
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 pt-6 pb-2 px-2 shadow-sm">
-        {/* 3. Panggil komponennya */}
-<ChartKlien data={expenseByCategory} />
+        <ChartKlien data={expenseByCategory} />
       </div>
 
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
