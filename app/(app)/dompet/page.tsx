@@ -19,25 +19,37 @@ export default async function DompetPage({
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const activeMonth = params.month || defaultMonth;
 
-  const [wallets, transactions] = await Promise.all([
+  const [wallets, allTransactions] = await Promise.all([
     getWallets(userId),
     getTransactions(userId),
   ]);
 
-  // Hitung saldo per dompet HANYA sampai akhir bulan yang dipilih
+  // Ambil transaksi HANYA untuk bulan yang dipilih
+  const monthTransactions = allTransactions.filter((t) => t.date.startsWith(activeMonth));
+
+  // LOGIKA MUTASI BULAN INI (RESET KE 0 TIAP BULAN)
   const walletBalances = wallets.map((w) => {
-    // Ambil transaksi dompet ini yang tanggalnya <= akhir bulan aktif
-    const txs = transactions.filter((t) => t.wallet === w.name && t.date.slice(0, 7) <= activeMonth);
-    const income = txs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const expense = txs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-    const initBal = Number(w.initialBalance) || 0;
-    const currentBalance = initBal + income - expense;
-    return { ...w, initialBalance: initBal, currentBalance };
+    const txsThisMonth = allTransactions.filter(
+      (t) => t.wallet === w.name && t.date.startsWith(activeMonth)
+    );
+    
+    const incomeThisMonth = txsThisMonth.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+    const expenseThisMonth = txsThisMonth.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+
+    // Saldo Awal selalu 0 (karena ini mutasi bulan ini, bukan akumulasi)
+    const startBalance = 0;
+    const currentBalance = startBalance + incomeThisMonth - expenseThisMonth;
+
+    return { 
+      ...w, 
+      initialBalance: startBalance, 
+      currentBalance 
+    };
   });
 
   const totalBalance = walletBalances.reduce((sum, w) => sum + w.currentBalance, 0);
 
-  const availableMonths = Array.from(new Set(transactions.map((t) => t.date.slice(0, 7)))).sort((a, b) => b.localeCompare(a));
+  const availableMonths = Array.from(new Set(allTransactions.map((t) => t.date.slice(0, 7)))).sort((a, b) => b.localeCompare(a));
   if (!availableMonths.includes(defaultMonth)) availableMonths.unshift(defaultMonth);
 
   async function handleAdd(formData: FormData) {
@@ -87,7 +99,7 @@ export default async function DompetPage({
           <h1 className="text-lg font-bold">Dompet</h1>
         </div>
         <div className="text-right">
-          <p className="text-[10px] uppercase text-gray-500 tracking-wider">Total Saldo (s/d {new Date(activeMonth + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" })})</p>
+          <p className="text-[10px] uppercase text-gray-500 tracking-wider">Total Mutasi ({new Date(activeMonth + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" })})</p>
           <p className="font-bold text-lg text-gray-900 dark:text-gray-100 tabular-nums">Rp {totalBalance.toLocaleString("id-ID")}</p>
         </div>
       </div>
@@ -109,6 +121,7 @@ export default async function DompetPage({
 
       <WalletManager
         wallets={walletBalances}
+        monthTransactions={monthTransactions}
         activeMonth={activeMonth}
         onAdd={handleAdd}
         onUpdate={handleUpdate}

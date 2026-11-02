@@ -18,13 +18,18 @@ type Props = {
   periodLabel: string;
   prevUrl: string;
   nextUrl: string;
+  wallets: { id: string; name: string }[]; // <-- Prop Dompet
 };
 
-export default function StatisticClient({ transactions, availableMonths, activeMonth, activePeriod, periodLabel, prevUrl, nextUrl }: Props) {
+export default function StatisticClient({ transactions, availableMonths, activeMonth, activePeriod, periodLabel, prevUrl, nextUrl, wallets }: Props) {
   const [chartType, setChartType] = useState<"expense" | "income">("expense");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedWallet, setSelectedWallet] = useState<string>("all"); // <-- State Dompet
 
-  const safeTransactions = transactions || [];
+  // Filter transaksi berdasarkan dompet
+  const safeTransactions = (transactions || []).filter(t => 
+    selectedWallet === "all" ? true : t.wallet === selectedWallet
+  );
 
   const totalIncome = safeTransactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = safeTransactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
@@ -91,25 +96,34 @@ export default function StatisticClient({ transactions, availableMonths, activeM
         </div>
       </div>
 
-      {/* NAVIGASI WAKTU (Panah Kiri Kanan) */}
+      {/* NAVIGASI WAKTU */}
       <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 p-2 rounded-xl border border-gray-200 dark:border-gray-800">
-        <Link 
-          href={prevUrl}
-          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300"
-        >
+        <Link href={prevUrl} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </Link>
-        
-        <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-          {periodLabel}
-        </p>
-        
-        <Link 
-          href={nextUrl}
-          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300"
-        >
+        <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{periodLabel}</p>
+        <Link href={nextUrl} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
         </Link>
+      </div>
+
+      {/* FILTER DOMPET */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        <button
+          onClick={() => setSelectedWallet("all")}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${selectedWallet === "all" ? "bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-black" : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`}
+        >
+          Semua Dompet
+        </button>
+        {wallets.map(w => (
+          <button
+            key={w.id}
+            onClick={() => setSelectedWallet(w.name)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${selectedWallet === w.name ? "bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-black" : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`}
+          >
+            {w.name}
+          </button>
+        ))}
       </div>
 
       {/* TOGGLE PEMASUKAN vs PENGELUARAN */}
@@ -152,7 +166,7 @@ export default function StatisticClient({ transactions, availableMonths, activeM
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Rincian {labelForChart}</h3>
         </div>
         
-        {chartData.map((cat, index) => {
+        {chartData.map((cat) => {
           const pct = totalForChart > 0 ? ((cat.value / totalForChart) * 100).toFixed(0) : "0";
           const isSelected = selectedCategory === cat.name;
 

@@ -1,4 +1,4 @@
-import { getTransactions, processRecurring } from "@/lib/storage";
+import { getTransactions, processRecurring, getWallets } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import StatisticClient from "@/components/StatisticClient";
@@ -17,7 +17,11 @@ export default async function StatistikPage({
   const offset = Number(params.offset) || 0; 
   
   await processRecurring(userId);
-  const all = await getTransactions(userId);
+  
+  const [all, wallets] = await Promise.all([
+    getTransactions(userId),
+    getWallets(userId)
+  ]);
 
   const availableMonths = Array.from(new Set(all.map((t) => t.date.slice(0, 7)))).sort((a, b) => b.localeCompare(a));
   const activeMonth = params.month || availableMonths[0] || new Date().toISOString().slice(0, 7);
@@ -60,7 +64,6 @@ export default async function StatistikPage({
     periodLabel = new Date(activeMonth + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" });
   }
 
-  // LOGIKA URL PANAH DIPINDAH KE SINI (SERVER-SIDE)
   let prevUrl = "";
   let nextUrl = "";
 
@@ -88,6 +91,7 @@ export default async function StatistikPage({
       periodLabel={periodLabel}
       prevUrl={prevUrl} 
       nextUrl={nextUrl} 
+      wallets={wallets}
     />
   );
 }
