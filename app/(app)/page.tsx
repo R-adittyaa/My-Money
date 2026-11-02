@@ -9,7 +9,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import CategoryChart from "@/components/CategoryChart"; // Pastiin pake ChartKlien kalau udah diganti
+import ChartKlien from "@/components/ChartKlien";
 import BudgetProgress from "@/components/BudgetProgress";
 import BudgetAlert from "@/components/BudgetAlert";
 import BalanceDisplay from "@/components/BalanceDisplay";
@@ -18,14 +18,26 @@ import ShareDashboardButton from "@/components/ShareDashboardButton";
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
-  if (c.includes("makan") || c.includes("food") || c.includes("kopi")) return "🍔";
-  if (c.includes("transport") || c.includes("bensin") || c.includes("ojek")) return "🚗";
+  if (c.includes("makan") || c.includes("food") || c.includes("kopi"))
+    return "🍔";
+  if (c.includes("transport") || c.includes("bensin") || c.includes("ojek"))
+    return "🚗";
   if (c.includes("belanja") || c.includes("shop")) return "🛍️";
-  if (c.includes("gaji") || c.includes("salary") || c.includes("bonus")) return "💼";
-  if (c.includes("listrik") || c.includes("air") || c.includes("internet") || c.includes("tagihan")) return "💡";
-  if (c.includes("kesehatan") || c.includes("obat") || c.includes("dokter")) return "💊";
-  if (c.includes("hiburan") || c.includes("nonton") || c.includes("game")) return "🎮";
-  if (c.includes("pendidikan") || c.includes("buku") || c.includes("kursus")) return "📚";
+  if (c.includes("gaji") || c.includes("salary") || c.includes("bonus"))
+    return "💼";
+  if (
+    c.includes("listrik") ||
+    c.includes("air") ||
+    c.includes("internet") ||
+    c.includes("tagihan")
+  )
+    return "💡";
+  if (c.includes("kesehatan") || c.includes("obat") || c.includes("dokter"))
+    return "💊";
+  if (c.includes("hiburan") || c.includes("nonton") || c.includes("game"))
+    return "🎮";
+  if (c.includes("pendidikan") || c.includes("buku") || c.includes("kursus"))
+    return "📚";
   if (c.includes("rumah") || c.includes("sewa")) return "🏠";
   return "💵";
 }
@@ -77,7 +89,7 @@ export default async function DashboardPage({
       .reduce<Record<string, number>>((acc, t) => {
         acc[t.category] = (acc[t.category] || 0) + t.amount;
         return acc;
-      }, {})
+      }, {}),
   )
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
@@ -99,7 +111,7 @@ export default async function DashboardPage({
   const daysInMonth = new Date(
     Number(activeMonth.slice(0, 4)),
     Number(activeMonth.slice(5, 7)),
-    0
+    0,
   ).getDate();
   const avgDailyExpense = totalExpense / daysInMonth;
 
@@ -125,7 +137,11 @@ export default async function DashboardPage({
     if (!id || !amount || !category) throw new Error("Data tidak lengkap");
 
     await updateTransaction(session.user.id, id, {
-      date, amount, type, category, wallet,
+      date,
+      amount,
+      type,
+      category,
+      wallet,
       notes: ((formData.get("notes") as string) || "").trim(),
     });
     revalidatePath("/");
@@ -152,28 +168,57 @@ export default async function DashboardPage({
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-5 sm:p-6 text-white shadow-lg">
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute -bottom-16 -left-16 w-52 h-52 rounded-full bg-black/10 blur-3xl" />
-        
-        <ShareDashboardButton balance={balance} income={totalIncome} expense={totalExpense} monthLabel={monthLabel} />
+
+        <ShareDashboardButton
+          balance={balance}
+          income={totalIncome}
+          expense={totalExpense}
+          monthLabel={monthLabel}
+        />
 
         <div className="relative">
           {/* NAVIGASI BULAN DI SINI */}
           <div className="flex items-center gap-3 mb-1">
-            <Link 
-              href={`/?month=${prevMonthStr}`} 
+            <Link
+              href={`/?month=${prevMonthStr}`}
               className="p-1 rounded-full hover:bg-white/20 transition text-white/70 hover:text-white"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m15 18-6-6 6-6" />
+              </svg>
             </Link>
-            
+
             <p className="text-xs uppercase tracking-widest opacity-90 font-medium">
               Saldo · {monthLabel}
             </p>
 
-            <Link 
-              href={`/?month=${nextMonthStr}`} 
+            <Link
+              href={`/?month=${nextMonthStr}`}
               className="p-1 rounded-full hover:bg-white/20 transition text-white/70 hover:text-white"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m9 18 6-6-6-6" />
+              </svg>
             </Link>
           </div>
 
@@ -236,7 +281,7 @@ export default async function DashboardPage({
               Lihat detail →
             </Link>
           </div>
-          <CategoryChart data={expenseByCategory} />
+          <ChartKlien data={expenseByCategory} />
         </div>
       )}
 
