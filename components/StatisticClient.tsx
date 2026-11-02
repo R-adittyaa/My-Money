@@ -15,9 +15,10 @@ type Props = {
   availableMonths: string[];
   activeMonth: string;
   activePeriod: string;
+  weeklyRange?: string;
 };
 
-export default function StatisticClient({ transactions, availableMonths, activeMonth, activePeriod }: Props) {
+export default function StatisticClient({ transactions, availableMonths, activeMonth, activePeriod, weeklyRange }: Props) {
   const [chartType, setChartType] = useState<"expense" | "income">("expense");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -26,7 +27,6 @@ export default function StatisticClient({ transactions, availableMonths, activeM
   const totalIncome = safeTransactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = safeTransactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
 
-  // Data Chart berdasarkan tipe yang dipilih
   const chartData = Object.entries(
     safeTransactions.filter((t) => t.type === chartType).reduce<Record<string, number>>((acc, t) => {
         acc[t.category] = (acc[t.category] || 0) + t.amount;
@@ -48,7 +48,6 @@ export default function StatisticClient({ transactions, availableMonths, activeM
   const totalForChart = chartType === "income" ? totalIncome : totalExpense;
   const labelForChart = chartType === "income" ? "Pemasukan" : "Pengeluaran";
 
-  // Generate Link buat filter
   const buildLink = (period: string) => {
     const sp = new URLSearchParams();
     if (period !== "monthly") sp.set("period", period);
@@ -89,6 +88,14 @@ export default function StatisticClient({ transactions, availableMonths, activeM
           })}
         </div>
       </div>
+
+      {/* INFO RENTANG MINGGUAN */}
+      {activePeriod === "weekly" && weeklyRange && (
+        <div className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg border border-blue-100 dark:border-blue-800 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+          Menampilkan data: {weeklyRange}
+        </div>
+      )}
 
       {/* NAVIGASI BULAN (Cuma muncul kalau Bulanan) */}
       {activePeriod === "monthly" && availableMonths.length > 0 && (

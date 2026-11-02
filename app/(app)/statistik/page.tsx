@@ -22,20 +22,25 @@ export default async function StatistikPage({
   const activeMonth = params.month || availableMonths[0] || new Date().toISOString().slice(0, 7);
 
   let filteredTransactions = [];
+  let weeklyRange = "";
+
   const now = new Date();
 
   if (period === "weekly") {
     // 7 hari terakhir
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     filteredTransactions = all.filter(t => new Date(t.date) >= sevenDaysAgo);
+    
+    // Bikin format tanggal (Misal: 27 Okt - 2 Nov)
+    const start = sevenDaysAgo.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    const end = now.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    weeklyRange = `${start} - ${end}`;
   } 
   else if (period === "yearly") {
-    // Tahun dari activeMonth
     const year = activeMonth.slice(0, 4);
     filteredTransactions = all.filter(t => t.date.startsWith(year));
   } 
   else {
-    // Bulanan (default)
     filteredTransactions = all.filter((t) => t.date.startsWith(activeMonth));
   }
 
@@ -45,6 +50,7 @@ export default async function StatistikPage({
       availableMonths={availableMonths}
       activeMonth={activeMonth} 
       activePeriod={period}
+      weeklyRange={weeklyRange}
     />
   );
 }
