@@ -15,10 +15,12 @@ type Props = {
   availableMonths: string[];
   activeMonth: string;
   activePeriod: string;
-  weeklyRange?: string;
+  periodLabel: string;
+  prevUrl: string;
+  nextUrl: string;
 };
 
-export default function StatisticClient({ transactions, availableMonths, activeMonth, activePeriod, weeklyRange }: Props) {
+export default function StatisticClient({ transactions, availableMonths, activeMonth, activePeriod, periodLabel, prevUrl, nextUrl }: Props) {
   const [chartType, setChartType] = useState<"expense" | "income">("expense");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -51,7 +53,7 @@ export default function StatisticClient({ transactions, availableMonths, activeM
   const buildLink = (period: string) => {
     const sp = new URLSearchParams();
     if (period !== "monthly") sp.set("period", period);
-    sp.set("month", activeMonth);
+    else sp.set("month", activeMonth);
     return `/statistik?${sp.toString()}`;
   };
 
@@ -89,31 +91,26 @@ export default function StatisticClient({ transactions, availableMonths, activeM
         </div>
       </div>
 
-      {/* INFO RENTANG MINGGUAN */}
-      {activePeriod === "weekly" && weeklyRange && (
-        <div className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg border border-blue-100 dark:border-blue-800 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-          Menampilkan data: {weeklyRange}
-        </div>
-      )}
-
-      {/* NAVIGASI BULAN (Cuma muncul kalau Bulanan) */}
-      {activePeriod === "monthly" && availableMonths.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {availableMonths.slice(0, 12).map((m) => {
-            const isActive = m === activeMonth;
-            const label = new Date(m + "-01").toLocaleDateString("id-ID", { month: "short", year: "2-digit" });
-            const sp = new URLSearchParams();
-            sp.set("month", m);
-            sp.set("period", "monthly");
-            return (
-              <Link key={m} href={`/statistik?${sp.toString()}`} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${isActive ? "bg-red-600 text-white border-red-600 shadow-sm" : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-red-400"}`}>
-                {label}
-              </Link>
-            );
-          })}
-        </div>
-      )}
+      {/* NAVIGASI WAKTU (Panah Kiri Kanan) */}
+      <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 p-2 rounded-xl border border-gray-200 dark:border-gray-800">
+        <Link 
+          href={prevUrl}
+          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </Link>
+        
+        <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+          {periodLabel}
+        </p>
+        
+        <Link 
+          href={nextUrl}
+          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </Link>
+      </div>
 
       {/* TOGGLE PEMASUKAN vs PENGELUARAN */}
       <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">

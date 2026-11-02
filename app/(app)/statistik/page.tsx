@@ -6,7 +6,7 @@ import StatisticClient from "@/components/StatisticClient";
 export default async function StatistikPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; period?: string }>;
+  searchParams: Promise<{ month?: string; period?: string; offset?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -14,6 +14,7 @@ export default async function StatistikPage({
 
   const params = await searchParams;
   const period = params.period || "monthly";
+  const offset = Number(params.offset) || 0; 
   
   await processRecurring(userId);
   const all = await getTransactions(userId);
@@ -22,26 +23,60 @@ export default async function StatistikPage({
   const activeMonth = params.month || availableMonths[0] || new Date().toISOString().slice(0, 7);
 
   let filteredTransactions = [];
-  let weeklyRange = "";
+  let periodLabel = "";
 
   const now = new Date();
 
   if (period === "weekly") {
-    // 7 hari terakhir
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    filteredTransactions = all.filter(t => new Date(t.date) >= sevenDaysAgo);
-    
-    // Bikin format tanggal (Misal: 27 Okt - 2 Nov)
-    const start = sevenDaysAgo.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-    const end = now.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-    weeklyRange = `${start} - ${end}`;
+    const targetDate = new Date(now.getTime() + offset * 7 * 24 * 60 * 60 * 1000);
+    const day = targetDate.getDay();
+    const diff = targetDate.getDate() - day + (day === 0 ? -6 : 1);
+    const startOfWeek = new Date(targetDate.setDate(diff));
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    filteredTransactions = all.filter(t => {
+      const tDate = new Date(t.date);
+      return tDate >= startOfWeek && tDate <= endOfWeek;
+    });
+
+    const startLabel = startOfWeek.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    const endLabel = endOfWeek.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+    periodLabel = `${startLabel} - ${endLabel}`;
+
   } 
   else if (period === "yearly") {
-    const year = activeMonth.slice(0, 4);
-    filteredTransactions = all.filter(t => t.date.startsWith(year));
+    const currentYear = now.getFullYear();
+    const targetYear = currentYear + offset;
+    
+    filteredTransactions = all.filter(t => t.date.startsWith(String(targetYear)));
+    periodLabel = `Tahun ${targetYear}`;
   } 
   else {
     filteredTransactions = all.filter((t) => t.date.startsWith(activeMonth));
+    periodLabel = new Date(activeMonth + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+  }
+
+  // LOGIKA URL PANAH DIPINDAH KE SINI (SERVER-SIDE)
+  let prevUrl = "";
+  let nextUrl = "";
+
+  if (period === "weekly") {
+    prevUrl = `/statistik?period=weekly&offset=${offset - 1}`;
+    nextUrl = `/statistik?period=weekly&offset=${offset + 1}`;
+  } else if (period === "yearly") {
+    prevUrl = `/statistik?period=yearly&offset=${offset - 1}`;
+    nextUrl = `/statistik?period=yearly&offset=${offset + 1}`;
+  } else {
+    const prevDate = new Date(activeMonth + "-01");
+    prevDate.setMonth(prevDate.getMonth() - 1);
+    const nextDate = new Date(activeMonth + "-01");
+    nextDate.setMonth(nextDate.getMonth() + 1);
+    prevUrl = `/statistik?period=monthly&month=${prevDate.toISOString().slice(0, 7)}`;
+    nextUrl = `/statistik?period=monthly&month=${nextDate.toISOString().slice(0, 7)}`;
   }
 
   return (
@@ -50,7 +85,9 @@ export default async function StatistikPage({
       availableMonths={availableMonths}
       activeMonth={activeMonth} 
       activePeriod={period}
-      weeklyRange={weeklyRange}
+      periodLabel={periodLabel}
+      prevUrl={prevUrl} 
+      nextUrl={nextUrl} 
     />
   );
 }
