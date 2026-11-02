@@ -4,21 +4,17 @@ import {
   processRecurring,
   getBudgets,
   updateTransaction,
-  deleteMultipleTransactions,
-  bulkUpdateTransactions,
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import ChartKlien from "@/components/ChartKlien";
+import CategoryChart from "@/components/CategoryChart"; // Pastiin pake ChartKlien kalau udah diganti
 import BudgetProgress from "@/components/BudgetProgress";
 import BudgetAlert from "@/components/BudgetAlert";
 import BalanceDisplay from "@/components/BalanceDisplay";
 import TransactionDetail from "@/components/TransactionDetail";
-import BulkActionBar from "@/components/BulkActionBar"; 
 import ShareDashboardButton from "@/components/ShareDashboardButton";
-
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
@@ -39,11 +35,16 @@ function formatRupiah(n: number): string {
   return sign + "Rp " + Math.abs(n).toLocaleString("id-ID");
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
+  const params = await searchParams;
   await processRecurring(userId);
 
   const [all, budgets] = await Promise.all([
@@ -51,10 +52,14 @@ export default async function DashboardPage() {
     getBudgets(userId),
   ]);
 
+  // LOGIKA NAVIGASI BULAN
   const now = new Date();
-  const activeMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const activeMonth = params.month || defaultMonth;
+
   const monthTransactions = all.filter((t) => t.date.startsWith(activeMonth));
 
+  // Hitung total
   const totalIncome = monthTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
@@ -65,6 +70,7 @@ export default async function DashboardPage() {
 
   const balance = totalIncome - totalExpense;
 
+  // Statistik lainnya
   const expenseByCategory = Object.entries(
     monthTransactions
       .filter((t) => t.type === "expense")
@@ -91,8 +97,8 @@ export default async function DashboardPage() {
     .slice(0, 10);
 
   const daysInMonth = new Date(
-    now.getFullYear(),
-    now.getMonth() + 1,
+    Number(activeMonth.slice(0, 4)),
+    Number(activeMonth.slice(5, 7)),
     0
   ).getDate();
   const avgDailyExpense = totalExpense / daysInMonth;
@@ -125,27 +131,19 @@ export default async function DashboardPage() {
     revalidatePath("/");
   }
 
-  // ==== BULK ACTIONS BUAT HOME ====
-  async function handleBulkDelete(ids: string[]) {
-    "use server";
-    const session = await auth();
-    if (!session?.user?.id) throw new Error("Unauthorized");
-    await deleteMultipleTransactions(session.user.id, ids);
-    revalidatePath("/"); revalidatePath("/transaksi");
-  }
-
-  async function handleBulkEdit(ids: string[], updates: { category?: string; wallet?: string; date?: string }) {
-    "use server";
-    const session = await auth();
-    if (!session?.user?.id) throw new Error("Unauthorized");
-    await bulkUpdateTransactions(session.user.id, ids, updates);
-    revalidatePath("/"); revalidatePath("/transaksi");
-  }
-
-  const monthLabel = now.toLocaleDateString("id-ID", {
+  const monthLabel = new Date(activeMonth + "-01").toLocaleDateString("id-ID", {
     month: "long",
     year: "numeric",
   });
+
+  // Logika tombol panah Kiri & Kanan
+  const prevMonth = new Date(activeMonth + "-01");
+  prevMonth.setMonth(prevMonth.getMonth() - 1);
+  const prevMonthStr = prevMonth.toISOString().slice(0, 7);
+
+  const nextMonth = new Date(activeMonth + "-01");
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const nextMonthStr = nextMonth.toISOString().slice(0, 7);
 
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0 pb-24">
@@ -154,18 +152,31 @@ export default async function DashboardPage() {
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-5 sm:p-6 text-white shadow-lg">
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute -bottom-16 -left-16 w-52 h-52 rounded-full bg-black/10 blur-3xl" />
-
-        <ShareDashboardButton 
-    balance={balance} 
-    income={totalIncome} 
-    expense={totalExpense} 
-    monthLabel={monthLabel} 
-  />
         
+        <ShareDashboardButton balance={balance} income={totalIncome} expense={totalExpense} monthLabel={monthLabel} />
+
         <div className="relative">
-          <p className="text-xs uppercase tracking-widest opacity-80">
-            Saldo · {monthLabel}
-          </p>
+          {/* NAVIGASI BULAN DI SINI */}
+          <div className="flex items-center gap-3 mb-1">
+            <Link 
+              href={`/?month=${prevMonthStr}`} 
+              className="p-1 rounded-full hover:bg-white/20 transition text-white/70 hover:text-white"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </Link>
+            
+            <p className="text-xs uppercase tracking-widest opacity-90 font-medium">
+              Saldo · {monthLabel}
+            </p>
+
+            <Link 
+              href={`/?month=${nextMonthStr}`} 
+              className="p-1 rounded-full hover:bg-white/20 transition text-white/70 hover:text-white"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </Link>
+          </div>
+
           <BalanceDisplay
             balance={balance}
             income={totalIncome}
@@ -225,7 +236,7 @@ export default async function DashboardPage() {
               Lihat detail →
             </Link>
           </div>
-<ChartKlien data={expenseByCategory} />
+          <CategoryChart data={expenseByCategory} />
         </div>
       )}
 
@@ -270,12 +281,6 @@ export default async function DashboardPage() {
           </ul>
         )}
       </section>
-
-      {/* BULK ACTION BAR BUAT HOME */}
-      <BulkActionBar 
-        onBulkDelete={handleBulkDelete} 
-        onBulkEdit={handleBulkEdit} 
-      />
     </main>
   );
 }
