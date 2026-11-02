@@ -10,15 +10,15 @@ const ChartKlien = dynamic(() => import("./ChartKlien"), {
   loading: () => <div className="h-[280px] w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
 });
 
-import { COLORS } from "./ChartKlien";
-
 type Props = {
   transactions: Transaction[];
-  monthLabel: string;
+  availableMonths: string[];
   activeMonth: string;
+  activePeriod: string;
 };
 
-export default function StatisticClient({ transactions, monthLabel, activeMonth }: Props) {
+export default function StatisticClient({ transactions, availableMonths, activeMonth, activePeriod }: Props) {
+  const [chartType, setChartType] = useState<"expense" | "income">("expense");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const safeTransactions = transactions || [];
@@ -26,8 +26,9 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
   const totalIncome = safeTransactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = safeTransactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
 
-  const expenseByCategory = Object.entries(
-    safeTransactions.filter((t) => t.type === "expense").reduce<Record<string, number>>((acc, t) => {
+  // Data Chart berdasarkan tipe yang dipilih
+  const chartData = Object.entries(
+    safeTransactions.filter((t) => t.type === chartType).reduce<Record<string, number>>((acc, t) => {
         acc[t.category] = (acc[t.category] || 0) + t.amount;
         return acc;
       }, {})
@@ -41,56 +42,114 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
   };
 
   const historyTransaksi = safeTransactions.filter(
-    (t) => t.category === selectedCategory && t.type === "expense"
+    (t) => t.category === selectedCategory && t.type === chartType
   );
 
-  // LOGIKA NAVIGASI BULAN
-  const prevMonth = new Date(activeMonth + "-01");
-  prevMonth.setMonth(prevMonth.getMonth() - 1);
-  const prevMonthStr = prevMonth.toISOString().slice(0, 7);
+  const totalForChart = chartType === "income" ? totalIncome : totalExpense;
+  const labelForChart = chartType === "income" ? "Pemasukan" : "Pengeluaran";
 
-  const nextMonth = new Date(activeMonth + "-01");
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
-  const nextMonthStr = nextMonth.toISOString().slice(0, 7);
+  // Generate Link buat filter
+  const buildLink = (period: string) => {
+    const sp = new URLSearchParams();
+    if (period !== "monthly") sp.set("period", period);
+    sp.set("month", activeMonth);
+    return `/statistik?${sp.toString()}`;
+  };
+
+  const periods = [
+    { id: "weekly", label: "Mingguan" },
+    { id: "monthly", label: "Bulanan" },
+    { id: "yearly", label: "Tahunan" },
+  ];
 
   return (
-    <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-4 max-w-4xl mx-auto lg:mx-0 pb-20">
-      <div className="flex items-center justify-between">
+    <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0 pb-20">
+      
+      {/* HEADER: FILTER PERIODE */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="w-1 h-5 bg-red-600 rounded-full"></span>
           <h1 className="text-lg font-bold">Statistik</h1>
         </div>
         
-        {/* NAVIGASI BULAN DI SINI */}
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-full">
-          <Link href={`/statistik?month=${prevMonthStr}`} className="p-1.5 rounded-full hover:bg-white dark:hover:bg-gray-700 transition text-gray-500">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          </Link>
-          <span className="text-xs font-medium px-1">{monthLabel}</span>
-          <Link href={`/statistik?month=${nextMonthStr}`} className="p-1.5 rounded-full hover:bg-white dark:hover:bg-gray-700 transition text-gray-500">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </Link>
+        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl overflow-x-auto">
+          {periods.map((p) => {
+            const isActive = activePeriod === p.id;
+            return (
+              <Link 
+                key={p.id} 
+                href={buildLink(p.id)}
+                className={`px-4 py-1.5 text-xs font-medium rounded-lg transition whitespace-nowrap ${
+                  isActive ? "bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                {p.label}
+              </Link>
+            )
+          })}
         </div>
       </div>
 
-      <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+      {/* NAVIGASI BULAN (Cuma muncul kalau Bulanan) */}
+      {activePeriod === "monthly" && availableMonths.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          {availableMonths.slice(0, 12).map((m) => {
+            const isActive = m === activeMonth;
+            const label = new Date(m + "-01").toLocaleDateString("id-ID", { month: "short", year: "2-digit" });
+            const sp = new URLSearchParams();
+            sp.set("month", m);
+            sp.set("period", "monthly");
+            return (
+              <Link key={m} href={`/statistik?${sp.toString()}`} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${isActive ? "bg-red-600 text-white border-red-600 shadow-sm" : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-red-400"}`}>
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {/* TOGGLE PEMASUKAN vs PENGELUARAN */}
+      <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+        <button 
+          onClick={() => { setChartType("income"); setSelectedCategory(null); }} 
+          className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${chartType === "income" ? "bg-white dark:bg-gray-900 shadow-sm text-green-600" : "text-gray-500"}`}
+        >
+          ↓ Pemasukan
+        </button>
+        <button 
+          onClick={() => { setChartType("expense"); setSelectedCategory(null); }} 
+          className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${chartType === "expense" ? "bg-white dark:bg-gray-900 shadow-sm text-red-600" : "text-gray-500"}`}
+        >
+          ↑ Pengeluaran
+        </button>
+      </div>
+
+      {/* KARTU TOTAL */}
+      <div className="flex items-center justify-between bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">Pendapatan</p>
-          <p className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">{formatRupiah(totalIncome)}</p>
+          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">Total {labelForChart}</p>
+          <p className={`text-xl font-bold tabular-nums ${chartType === "income" ? "text-green-600" : "text-red-600"}`}>
+            {formatRupiah(totalForChart)}
+          </p>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">Pengeluaran</p>
-          <p className="text-sm font-bold text-red-600 dark:text-red-500 tabular-nums">{formatRupiah(totalExpense)}</p>
+        <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-xl">
+          {chartType === "income" ? "💵" : "💸"}
         </div>
       </div>
 
+      {/* CHART */}
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 pt-6 pb-2 px-2 shadow-sm">
-        <ChartKlien data={expenseByCategory} />
+        <ChartKlien data={chartData} type={chartType} />
       </div>
 
+      {/* LIST RANKING */}
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        {expenseByCategory.map((cat, index) => {
-          const pct = totalExpense > 0 ? ((cat.value / totalExpense) * 100).toFixed(0) : "0";
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Rincian {labelForChart}</h3>
+        </div>
+        
+        {chartData.map((cat, index) => {
+          const pct = totalForChart > 0 ? ((cat.value / totalForChart) * 100).toFixed(0) : "0";
           const isSelected = selectedCategory === cat.name;
 
           return (
@@ -102,7 +161,7 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-7 flex items-center justify-center rounded-md text-xs font-bold text-white shadow-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }}>
+                  <div className={`w-10 h-7 flex items-center justify-center rounded-md text-[10px] font-bold text-white shadow-sm ${chartType === "income" ? "bg-green-600" : "bg-red-600"}`}>
                     {pct}%
                   </div>
                   <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{cat.name}</p>
@@ -136,8 +195,8 @@ export default function StatisticClient({ transactions, monthLabel, activeMonth 
             </div>
           );
         })}
-        {expenseByCategory.length === 0 && (
-          <div className="p-10 text-center text-sm text-gray-500">Belum ada pengeluaran bulan ini.</div>
+        {chartData.length === 0 && (
+          <div className="p-10 text-center text-sm text-gray-500">Belum ada data {labelForChart.toLowerCase()} di periode ini.</div>
         )}
       </div>
     </main>
