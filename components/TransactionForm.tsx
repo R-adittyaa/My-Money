@@ -48,6 +48,9 @@ export default function TransactionForm({
   const [currentTime, setCurrentTime] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
+  // STATE BARU: Nyimpen tipe yang lagi dipilih
+  const [selectedType, setSelectedType] = useState<"expense" | "income">("expense");
+
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedWallet, setSelectedWallet] = useState("");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -99,6 +102,7 @@ export default function TransactionForm({
           <h2 className="font-semibold text-sm">Tambah Transaksi</h2>
         </div>
 
+        {/* Date & Time */}
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Tanggal <span className="text-red-500">*</span></label>
@@ -114,11 +118,11 @@ export default function TransactionForm({
           <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Tipe <span className="text-red-500">*</span></label>
           <div className="grid grid-cols-2 gap-2">
             <label className="cursor-pointer">
-              <input type="radio" name="type" value="expense" defaultChecked className="peer sr-only" />
+              <input type="radio" name="type" value="expense" defaultChecked={selectedType === "expense"} onChange={() => { setSelectedType("expense"); setSelectedCategory(""); }} className="peer sr-only" />
               <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-red-600 peer-checked:text-white transition">↓ Keluar</div>
             </label>
             <label className="cursor-pointer">
-              <input type="radio" name="type" value="income" className="peer sr-only" />
+              <input type="radio" name="type" value="income" defaultChecked={selectedType === "income"} onChange={() => { setSelectedType("income"); setSelectedCategory(""); }} className="peer sr-only" />
               <div className="rounded-lg border border-gray-300 dark:border-gray-700 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 peer-checked:bg-green-600 peer-checked:text-white transition">↑ Masuk</div>
             </label>
           </div>
@@ -147,22 +151,31 @@ export default function TransactionForm({
           </button>
         </div>
 
-        {/* CATATAN */}
         <div>
           <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Catatan <span className="text-gray-400 dark:text-gray-500">(opsional)</span></label>
           <input name="notes" placeholder="Misal: Makan siang" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
         </div>
 
-        {/* LOKASI BARU */}
         <div>
           <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Lokasi <span className="text-gray-400 dark:text-gray-500">(opsional)</span></label>
-          <input name="location" placeholder="Misal: Warteg Bahari / Gofood" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
+          <input name="location" placeholder="Misal: Warteg Bahari" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
         </div>
 
         <SubmitButton disabled={!selectedCategory || !selectedWallet} />
       </form>
 
-      <CategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} categories={categories} onSelect={(name) => setSelectedCategory(name)} onAdd={onAddCategory} onEdit={onEditCategory} onDelete={onDeleteCategory} />
+      {/* KIRIM selectedType KE CATEGORY MODAL */}
+      <CategoryModal 
+        isOpen={isCategoryModalOpen} 
+        onClose={() => setIsCategoryModalOpen(false)} 
+        categories={categories} 
+        activeType={selectedType} 
+        onSelect={(name) => setSelectedCategory(name)} 
+        onAdd={onAddCategory} 
+        onEdit={onEditCategory} 
+        onDelete={onDeleteCategory} 
+      />
+      
       <WalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} wallets={wallets} onSelect={(name) => setSelectedWallet(name)} onAdd={onAddWallet} onEdit={onEditWallet} onDelete={onDeleteWallet} />
     </>
   );
