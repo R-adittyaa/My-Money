@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import AmountInput from "./AmountInput";
 import { Transaction } from "@/lib/types";
@@ -16,21 +16,15 @@ type Props = {
   wallets: Wallet[];
   monthTransactions: Transaction[];
   activeMonth: string;
-  isNew?: boolean;
   onAdd: (formData: FormData) => Promise<{ success?: boolean; error?: string }>;
   onUpdate: (formData: FormData) => Promise<{ success?: boolean; error?: string }>;
   onDelete: (formData: FormData) => Promise<{ success?: boolean; error?: string }>;
 };
 
-export default function WalletManager({ wallets, monthTransactions, activeMonth, isNew, onAdd, onUpdate, onDelete }: Props) {
+export default function WalletManager({ wallets, monthTransactions, activeMonth, onAdd, onUpdate, onDelete }: Props) {
   const [mode, setMode] = useState<"add" | "edit" | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [detailWallet, setDetailWallet] = useState<Wallet | null>(null);
-
-  // Kalau dari URL bawa isNew=true, langsung buka form
-  useEffect(() => {
-    if (isNew) setMode("add");
-  }, [isNew]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>, isEdit: boolean) {
     e.preventDefault();
@@ -114,7 +108,6 @@ export default function WalletManager({ wallets, monthTransactions, activeMonth,
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDetailWallet(null)} />
           <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl shadow-2xl animate-in zoom-in-95 overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Header Modal */}
             <div className="bg-gray-900 p-6 text-white relative overflow-hidden shrink-0">
               <div className="absolute top-0 right-0 w-40 h-40 bg-red-500/20 rounded-full blur-3xl"></div>
               <div className="flex justify-between items-start relative z-10">
@@ -127,7 +120,6 @@ export default function WalletManager({ wallets, monthTransactions, activeMonth,
             </div>
 
             <div className="overflow-y-auto p-5 space-y-6">
-              {/* KARTU RUMUS SALDO */}
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 space-y-2">
                 <div className="flex justify-between text-xs text-gray-500">
                   <span>Saldo Awal ({monthLabel})</span>
@@ -147,7 +139,6 @@ export default function WalletManager({ wallets, monthTransactions, activeMonth,
                 </div>
               </div>
 
-              {/* Bar Chart Mini */}
               {detail.expenseByCategory.length > 0 && (
                 <div>
                   <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-800 pb-2">Top Pengeluaran Bulan Ini</h4>
@@ -167,7 +158,6 @@ export default function WalletManager({ wallets, monthTransactions, activeMonth,
                 </div>
               )}
 
-              {/* List Transaksi */}
               <div>
                 <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-800 pb-2">Riwayat Transaksi</h4>
                 <div className="space-y-4">
