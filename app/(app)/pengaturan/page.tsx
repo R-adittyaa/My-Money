@@ -6,6 +6,7 @@ import ExportButton from "@/components/ExportButton";
 import LogoutButton from "@/components/LogoutButton";
 import AccountSettings from "@/components/AccountSettings";
 import { transactionsToCSV, generateFilename } from "@/lib/csv";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default async function PengaturanPage() {
   const session = await auth();
@@ -67,18 +68,22 @@ export default async function PengaturanPage() {
         </div>
       </section>
 
-      {/* SECTION: PREFERENSI */}
+            {/* SECTION: PREFERENSI */}
       <section className="space-y-3">
         <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">Preferensi</h2>
         
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm divide-y divide-gray-100 dark:divide-gray-800">
-          <div className="p-4 flex items-center justify-between">
-            <div>
+          
+          {/* TEMA */}
+          <div className="p-4">
+            <div className="mb-3">
               <p className="font-medium text-sm">Tema Aplikasi</p>
-              <p className="text-xs text-gray-500">Saat ini mengikuti sistem (Dark/Light)</p>
+              <p className="text-xs text-gray-500">Atur tampilan terang, gelap, atau ikuti sistem</p>
             </div>
-            <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 px-2 py-1 rounded-md font-medium">Auto</span>
+            <ThemeToggle />
           </div>
+
+          {/* KELOLA DOMPET */}
           <Link href="/dompet" className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
             <div>
               <p className="font-medium text-sm">Kelola Dompet</p>

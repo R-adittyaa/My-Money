@@ -5,6 +5,7 @@ import InstallPrompt from "@/components/InstallPrompt";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import Toaster from "@/components/Toaster";
 import SessionProvider from "@/components/SessionProvider";
+import ThemeProvider from "@/components/ThemeProvider";
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -18,8 +19,9 @@ export const metadata: Metadata = {
     title: "My Money",
   },
   icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/icon-192.png",
+    // PAKE .JPG KARENA FILENYA JPG
+    icon: "/icons/icon-192.jpg", 
+    apple: "/icons/icon-192.jpg",
   },
 };
 
@@ -37,16 +39,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" className="dark">
-      <body
-        className={`${geist.className} bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen antialiased`}
-      >
-        <SessionProvider>
-          {children}
-          <InstallPrompt />
-          <ServiceWorkerRegister />
-          <Toaster />
-        </SessionProvider>
+    <html lang="id" suppressHydrationWarning>
+      <body className={`${geist.className} bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen antialiased transition-colors duration-300`}>
+        <ThemeProvider>
+          <SessionProvider>
+            {children}
+            <InstallPrompt />
+            <ServiceWorkerRegister />
+            <Toaster />
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
