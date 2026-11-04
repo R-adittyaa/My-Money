@@ -94,6 +94,14 @@ export default async function PengaturanPage() {
         </div>
       </section>
 
+      <Link href="/pengaturan/master" className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition border-t border-gray-100 dark:border-gray-800">
+  <div>
+    <p className="font-medium text-sm">Master Data</p>
+    <p className="text-xs text-gray-500">Atur kategori dan dompet</p>
+  </div>
+  <span className="text-gray-400">→</span>
+</Link>
+
       {/* SECTION: DATA & EXPORT */}
       <section className="space-y-3">
         <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">Data & Backup</h2>
