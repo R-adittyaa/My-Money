@@ -1,7 +1,6 @@
 import { getTransactions, getCategories } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import InsightDetailClient from "@/components/InsightDetailClient";
 
 export default async function CategoryInsightPage({
@@ -16,40 +15,58 @@ export default async function CategoryInsightPage({
   const resolvedParams = await params;
   const categoryName = decodeURIComponent(resolvedParams.slug);
 
-  const allTransactions = await getTransactions(userId);
-  const categories = await getCategories(userId);
+  const [allTransactions, categories] = await Promise.all([
+    getTransactions(userId),
+    getCategories(userId),
+  ]);
 
   // Cari data kategori ini (buat dapet teks kustomnya)
-  const categoryData = categories.find(c => c.name === categoryName);
+  const categoryData = categories.find((c) => c.name === categoryName);
 
-  // Filter transaksi khusus kategori ini
-  const txs = allTransactions.filter(t => t.category === categoryName && t.type === "expense");
+  // Filter transaksi khusus kategori ini (pengeluaran)
+  const txs = allTransactions.filter(
+    (t) => t.category === categoryName && t.type === "expense"
+  );
 
   const totalExpense = txs.reduce((sum, t) => sum + t.amount, 0);
   const transactionCount = txs.length;
 
-  // Hitung "Batas Wajar" sederhana (misal: rata-rata nasional 500rb)
-  // Lu bisa ubah logika ini nanti
-  const limitWajar = 500000;
-  const limitBoros = 1000000;
+  // --- LOGIKA BARU: Berbasis Persentase dari Total Pemasukan ---
+  // Kita ambil bulan dari transaksi terbaru di kategori ini (fallback: bulan ini)
+  const latestTxDate = txs.length > 0 ? txs[0].date : new Date().toISOString();
+  const activeMonth = latestTxDate.slice(0, 7);
 
+  // Cari total pemasukan di bulan yang sama
+  const monthIncome = allTransactions
+    .filter((t) => t.type === "income" && t.date.startsWith(activeMonth))
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Hitung persentase
+  const percentageOfIncome = monthIncome > 0 ? (totalExpense / monthIncome) * 100 : 0;
+
+  // Tentukan Status (Threshold: Hemat < 15%, Wajar 15-30%, Boros > 30%)
   let status: "hemat" | "wajar" | "boros" = "wajar";
-  if (totalExpense < limitWajar) status = "hemat";
-  else if (totalExpense > limitBoros) status = "boros";
+  if (percentageOfIncome < 15) status = "hemat";
+  else if (percentageOfIncome > 30) status = "boros";
 
-  // Ambil teks kustom dari database, kalau gak ada pake default
-  const customText = status === "hemat" ? categoryData?.insightHemat 
-                   : status === "boros" ? categoryData?.insightBoros 
-                   : categoryData?.insightWajar;
+  // Teks kustom dari database
+  const customText =
+    status === "hemat"
+      ? categoryData?.insightHemat
+      : status === "boros"
+        ? categoryData?.insightBoros
+        : categoryData?.insightWajar;
 
   return (
-    <InsightDetailClient 
+    <InsightDetailClient
       categoryName={categoryName}
       totalExpense={totalExpense}
       transactionCount={transactionCount}
       status={status}
       customText={customText}
       transactions={txs}
+      percentageOfIncome={percentageOfIncome}
+      monthIncome={monthIncome}
     />
   );
 }
