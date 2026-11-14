@@ -7,9 +7,11 @@ import { Transaction } from "@/lib/types";
 
 type Props = {
   categoryName: string;
+  categoryType: "income" | "expense" | "both";
   totalExpense: number;
   transactionCount: number;
   status: "hemat" | "wajar" | "boros";
+  statusText: string;
   customText?: string;
   transactions: Transaction[];
   percentageOfIncome: number;
@@ -32,7 +34,6 @@ function AnimatedNumber({ value }: { value: number }) {
 // Background Partikel (Fix Hydration)
 function FloatingParticles() {
   const [particles, setParticles] = useState<any[]>([]);
-
   useEffect(() => {
     const newParticles = Array.from({ length: 20 }).map((_, i) => ({
       id: i,
@@ -57,10 +58,7 @@ function FloatingParticles() {
             left: `${p.x}%`,
             top: `${p.y}%`,
           }}
-          animate={{
-            y: [0, -100, -200],
-            opacity: [0, 1, 0],
-          }}
+          animate={{ y: [0, -100, -200], opacity: [0, 1, 0] }}
           transition={{
             duration: p.duration,
             repeat: Infinity,
@@ -75,44 +73,42 @@ function FloatingParticles() {
 
 export default function InsightDetailClient({
   categoryName,
+  categoryType,
   totalExpense,
   transactionCount,
   status,
+  statusText,
   customText,
   transactions,
   percentageOfIncome,
   monthIncome,
 }: Props) {
+  const isIncome = categoryType === "income";
+
+  // Konfigurasi warna berdasarkan tipe & status
   const config = {
     hemat: {
-      color: "from-green-500 to-emerald-700",
-      text: "text-green-400",
-      bg: "bg-green-500",
-      icon: "🌱",
-      title: "Hemat",
-      defaultMsg: "Wah, pengeluaran lu di kategori ini masih aman. Pertahankan!",
+      color: isIncome ? "from-blue-500 to-indigo-700" : "from-green-500 to-emerald-700",
+      text: isIncome ? "text-blue-400" : "text-green-400",
+      bg: isIncome ? "bg-blue-500" : "bg-green-500",
+      icon: isIncome ? "💼" : "🌱",
     },
     wajar: {
       color: "from-yellow-400 to-orange-500",
       text: "text-yellow-400",
       bg: "bg-yellow-500",
       icon: "👍",
-      title: "Wajar",
-      defaultMsg: "Pengeluaran lu masih normal, gak terlalu boros.",
     },
     boros: {
-      color: "from-red-500 to-rose-700",
-      text: "text-red-400",
-      bg: "bg-red-500",
-      icon: "🔥",
-      title: "Boros",
-      defaultMsg: "Hati-hati! Pengeluaran lu di kategori ini udah lumayan boros.",
+      color: isIncome ? "from-emerald-400 to-teal-600" : "from-red-500 to-rose-700",
+      text: isIncome ? "text-emerald-400" : "text-red-400",
+      bg: isIncome ? "bg-emerald-500" : "bg-red-500",
+      icon: isIncome ? "🎁" : "🔥",
     },
   };
 
   const current = config[status];
-  const limitBoros = 1000000;
-  const percentage = Math.min((totalExpense / limitBoros) * 100, 100);
+  const labelType = isIncome ? "Pemasukan" : "Pengeluaran";
 
   return (
     <main className="min-h-screen bg-gray-950 text-white relative overflow-hidden">
@@ -145,7 +141,7 @@ export default function InsightDetailClient({
             </svg>
           </Link>
           <div className="bg-white/10 px-3 py-1 rounded-full backdrop-blur-md text-[10px] font-bold tracking-widest uppercase">
-            Insight Kategori
+            Insight {labelType}
           </div>
           <div className="w-9"></div>
         </div>
@@ -178,10 +174,10 @@ export default function InsightDetailClient({
           >
             <div className={`flex items-center gap-2 ${current.text} font-bold`}>
               <span>{current.icon}</span>
-              <span className="text-sm">{current.title}</span>
+              <span className="text-sm">{statusText}</span>
             </div>
             <p className="text-[10px] text-gray-400">
-              {percentageOfIncome.toFixed(1)}% dari total pemasukan bulan ini
+              {percentageOfIncome.toFixed(1)}% dari total {labelType.toLowerCase()} bulan ini
             </p>
           </motion.div>
         </div>
@@ -212,10 +208,10 @@ export default function InsightDetailClient({
               fill="none"
               stroke={
                 status === "hemat"
-                  ? "#10b981"
+                  ? (isIncome ? "#3b82f6" : "#10b981")
                   : status === "wajar"
                     ? "#f59e0b"
-                    : "#ef4444"
+                    : (isIncome ? "#10b981" : "#ef4444")
               }
               strokeWidth="8"
               strokeLinecap="round"
@@ -249,11 +245,11 @@ export default function InsightDetailClient({
               Analisis
             </p>
             <p className="text-[10px] text-gray-500">
-              Income: Rp {monthIncome.toLocaleString("id-ID")}
+              Total {labelType}: Rp {monthIncome.toLocaleString("id-ID")}
             </p>
           </div>
           <p className="text-sm text-gray-300 italic leading-relaxed mb-3">
-            "{customText || current.defaultMsg}"
+            "{customText || "Belum ada catatan."}"
           </p>
           {/* Progress Bar Porsi */}
           <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
@@ -297,7 +293,7 @@ export default function InsightDetailClient({
               <p
                 className={`font-semibold tabular-nums text-sm ${current.text}`}
               >
-                - Rp {t.amount.toLocaleString("id-ID")}
+                {isIncome ? "+" : "-"} Rp {t.amount.toLocaleString("id-ID")}
               </p>
             </motion.div>
           ))}

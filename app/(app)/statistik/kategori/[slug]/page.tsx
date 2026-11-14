@@ -20,53 +20,69 @@ export default async function CategoryInsightPage({
     getCategories(userId),
   ]);
 
-  // Cari data kategori ini (buat dapet teks kustomnya)
   const categoryData = categories.find((c) => c.name === categoryName);
+  
+  // Cek tipe kategori ini (income/expense)
+  const categoryType = categoryData?.type || "expense";
 
-  // Filter transaksi khusus kategori ini (pengeluaran)
+  // Filter transaksi khusus kategori ini
   const txs = allTransactions.filter(
-    (t) => t.category === categoryName && t.type === "expense"
+    (t) => t.category === categoryName && t.type === categoryType
   );
 
-  const totalExpense = txs.reduce((sum, t) => sum + t.amount, 0);
+  const totalAmount = txs.reduce((sum, t) => sum + t.amount, 0);
   const transactionCount = txs.length;
 
-  // --- LOGIKA BARU: Berbasis Persentase dari Total Pemasukan ---
-  // Kita ambil bulan dari transaksi terbaru di kategori ini (fallback: bulan ini)
+  // Ambil bulan dari transaksi terbaru (fallback: bulan ini)
   const latestTxDate = txs.length > 0 ? txs[0].date : new Date().toISOString();
   const activeMonth = latestTxDate.slice(0, 7);
 
-  // Cari total pemasukan di bulan yang sama
-  const monthIncome = allTransactions
-    .filter((t) => t.type === "income" && t.date.startsWith(activeMonth))
+  // Hitung total pemasukan/pengeluaran sebulan (sesuai tipe)
+  const monthTotal = allTransactions
+    .filter((t) => t.type === categoryType && t.date.startsWith(activeMonth))
     .reduce((sum, t) => sum + t.amount, 0);
 
-  // Hitung persentase
-  const percentageOfIncome = monthIncome > 0 ? (totalExpense / monthIncome) * 100 : 0;
+  // Hitung persentase porsi
+  const percentage = monthTotal > 0 ? (totalAmount / monthTotal) * 100 : 0;
 
-  // Tentukan Status (Threshold: Hemat < 15%, Wajar 15-30%, Boros > 30%)
   let status: "hemat" | "wajar" | "boros" = "wajar";
-  if (percentageOfIncome < 15) status = "hemat";
-  else if (percentageOfIncome > 30) status = "boros";
+  let statusText = "";
 
-  // Teks kustom dari database
-  const customText =
-    status === "hemat"
-      ? categoryData?.insightHemat
-      : status === "boros"
-        ? categoryData?.insightBoros
-        : categoryData?.insightWajar;
+  if (categoryType === "expense") {
+    // LOGIKA PENGELUARAN
+    if (percentage < 15) { status = "hemat"; statusText = "Hemat"; }
+    else if (percentage > 30) { status = "boros"; statusText = "Boros"; }
+    else { status = "wajar"; statusText = "Wajar"; }
+  } else {
+    // LOGIKA PEMASUKAN
+    if (percentage > 50) { status = "hemat"; statusText = "Utama"; }
+    else if (percentage > 10) { status = "wajar"; statusText = "Sampingan"; }
+    else { status = "boros"; statusText = "Bonus"; }
+  }
+
+  // Ambil teks kustom dari database (mapping beda buat income)
+  let customText = categoryData?.insightWajar;
+  if (categoryType === "expense") {
+    if (status === "hemat") customText = categoryData?.insightHemat;
+    if (status === "boros") customText = categoryData?.insightBoros;
+  } else {
+    // Untuk Income: hemat = Utama, boros = Bonus
+    if (status === "hemat") customText = categoryData?.insightHemat;
+    if (status === "boros") customText = categoryData?.insightBoros;
+  }
 
   return (
     <InsightDetailClient
       categoryName={categoryName}
-      totalExpense={totalExpense}
+      categoryType={categoryType}
+      totalExpense={totalAmount} // Ganti nama jadi totalAmount aja biar netral
       transactionCount={transactionCount}
       status={status}
+      statusText={statusText}
       customText={customText}
       transactions={txs}
-      percentageOfIncome={percentageOfIncome}
-      monthIncome={monthIncome}
+      percentageOfIncome={percentage}
+      monthIncome={monthTotal}
     />
   );
 }

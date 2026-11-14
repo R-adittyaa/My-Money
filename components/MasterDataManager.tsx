@@ -144,28 +144,54 @@ export default function MasterDataManager({
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-500"
               />
               
-              {/* INPUT INSIGHT (Cuma muncul pas Edit & Pengeluaran) */}
-              {catMode === "edit" && catType === "expense" && (
+              {/* INPUT INSIGHT (Muncul pas Edit, buat DUA TIPE) */}
+              {catMode === "edit" && (
                 <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Kustomisasi Teks Insight</p>
-                  <input
-                    value={insightHemat}
-                    onChange={(e) => setInsightHemat(e.target.value)}
-                    placeholder="Teks kalau Hemat (Misal: Aman bro!)"
-                    className="w-full rounded-lg border border-green-300 dark:border-green-900 bg-green-50 dark:bg-green-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                  <input
-                    value={insightWajar}
-                    onChange={(e) => setInsightWajar(e.target.value)}
-                    placeholder="Teks kalau Wajar (Misal: Masih normal)"
-                    className="w-full rounded-lg border border-yellow-300 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-yellow-500"
-                  />
-                  <input
-                    value={insightBoros}
-                    onChange={(e) => setInsightBoros(e.target.value)}
-                    placeholder="Teks kalau Boros (Misal: Jangan boros!)"
-                    className="w-full rounded-lg border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-red-500"
-                  />
+                  
+                  {catType === "expense" ? (
+                    <>
+                      <input
+                        value={insightHemat}
+                        onChange={(e) => setInsightHemat(e.target.value)}
+                        placeholder="Teks kalau Hemat (Misal: Aman bro!)"
+                        className="w-full rounded-lg border border-green-300 dark:border-green-900 bg-green-50 dark:bg-green-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                      <input
+                        value={insightWajar}
+                        onChange={(e) => setInsightWajar(e.target.value)}
+                        placeholder="Teks kalau Wajar (Misal: Masih normal)"
+                        className="w-full rounded-lg border border-yellow-300 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                      <input
+                        value={insightBoros}
+                        onChange={(e) => setInsightBoros(e.target.value)}
+                        placeholder="Teks kalau Boros (Misal: Jangan boros!)"
+                        className="w-full rounded-lg border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-red-500"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        value={insightHemat}
+                        onChange={(e) => setInsightHemat(e.target.value)}
+                        placeholder="Teks kalau Utama (Misal: Gaji pokok)"
+                        className="w-full rounded-lg border border-blue-300 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                        value={insightWajar}
+                        onChange={(e) => setInsightWajar(e.target.value)}
+                        placeholder="Teks kalau Sampingan (Misal: Freelance)"
+                        className="w-full rounded-lg border border-yellow-300 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                      <input
+                        value={insightBoros}
+                        onChange={(e) => setInsightBoros(e.target.value)}
+                        placeholder="Teks kalau Bonus (Misal: Cuan tambahan!)"
+                        className="w-full rounded-lg border border-emerald-300 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </>
+                  )}
                 </div>
               )}
 
@@ -215,7 +241,7 @@ export default function MasterDataManager({
         </div>
       )}
 
-      {/* KONTEN DOMPET (Sama kayak sebelumnya) */}
+      {/* KONTEN DOMPET */}
       {activeTab === "wallet" && (
         <div className="space-y-4">
           {walletMode ? (
