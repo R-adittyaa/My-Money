@@ -25,12 +25,26 @@ export default async function MasterDataPage() {
     revalidatePath("/pengaturan/master");
   }
 
-  async function handleEditCategory(id: string, name: string, type: "income" | "expense") {
+  // INI YANG DIBENERIN (Nangkep 3 teks insight)
+  async function handleEditCategory(
+    id: string, 
+    name: string, 
+    type: "income" | "expense",
+    insightHemat?: string,
+    insightWajar?: string,
+    insightBoros?: string
+  ) {
     "use server";
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
-    await updateCategory(session.user.id, id, name, type);
+    
+    await updateCategory(session.user.id, id, name, type, {
+      hemat: insightHemat,
+      wajar: insightWajar,
+      boros: insightBoros,
+    });
     revalidatePath("/pengaturan/master");
+    revalidatePath("/statistik"); 
   }
 
   async function handleDeleteCategory(id: string) {

@@ -3,14 +3,21 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-type Category = { id: string; name: string; type: "income" | "expense" | "both" };
+type Category = { 
+  id: string; 
+  name: string; 
+  type: "income" | "expense" | "both";
+  insightHemat?: string;
+  insightWajar?: string;
+  insightBoros?: string;
+};
 type Wallet = { id: string; name: string; initialBalance: number };
 
 type Props = {
   categories: Category[];
   wallets: Wallet[];
   onAddCategory: (name: string, type: "income" | "expense") => Promise<void>;
-  onEditCategory: (id: string, name: string, type: "income" | "expense") => Promise<void>;
+  onEditCategory: (id: string, name: string, type: "income" | "expense", hemat?: string, wajar?: string, boros?: string) => Promise<void>;
   onDeleteCategory: (id: string) => Promise<void>;
   onAddWallet: (name: string) => Promise<void>;
   onEditWallet: (id: string, name: string) => Promise<void>;
@@ -30,6 +37,11 @@ export default function MasterDataManager({
   const [catName, setCatName] = useState("");
   const [catType, setCatType] = useState<"income" | "expense">("expense");
 
+  // State Insight Teks Kustom
+  const [insightHemat, setInsightHemat] = useState("");
+  const [insightWajar, setInsightWajar] = useState("");
+  const [insightBoros, setInsightBoros] = useState("");
+
   // State Form Dompet
   const [walletMode, setWalletMode] = useState<"add" | "edit" | null>(null);
   const [editWalletId, setEditWalletId] = useState<string | null>(null);
@@ -40,14 +52,15 @@ export default function MasterDataManager({
     e.preventDefault();
     try {
       if (catMode === "edit" && editCatId) {
-        await onEditCategory(editCatId, catName, catType);
-        toast.success("Kategori diupdate");
+        await onEditCategory(editCatId, catName, catType, insightHemat, insightWajar, insightBoros);
+        toast.success("Kategori & Insight diupdate");
       } else {
         await onAddCategory(catName, catType);
         toast.success("Kategori ditambahkan");
       }
       setCatMode(null);
       setCatName("");
+      setInsightHemat(""); setInsightWajar(""); setInsightBoros("");
     } catch { toast.error("Gagal menyimpan kategori"); }
   }
 
@@ -86,6 +99,16 @@ export default function MasterDataManager({
   const expenseCats = categories.filter(c => c.type === "expense");
   const incomeCats = categories.filter(c => c.type === "income");
 
+  function openEdit(c: Category) {
+    setCatMode("edit");
+    setEditCatId(c.id);
+    setCatName(c.name);
+    setCatType(c.type as "income" | "expense");
+    setInsightHemat(c.insightHemat || "");
+    setInsightWajar(c.insightWajar || "");
+    setInsightBoros(c.insightBoros || "");
+  }
+
   return (
     <div className="space-y-4">
       {/* TABS */}
@@ -120,7 +143,33 @@ export default function MasterDataManager({
                 placeholder="Nama Kategori"
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-500"
               />
-              <div className="flex gap-2">
+              
+              {/* INPUT INSIGHT (Cuma muncul pas Edit & Pengeluaran) */}
+              {catMode === "edit" && catType === "expense" && (
+                <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Kustomisasi Teks Insight</p>
+                  <input
+                    value={insightHemat}
+                    onChange={(e) => setInsightHemat(e.target.value)}
+                    placeholder="Teks kalau Hemat (Misal: Aman bro!)"
+                    className="w-full rounded-lg border border-green-300 dark:border-green-900 bg-green-50 dark:bg-green-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  <input
+                    value={insightWajar}
+                    onChange={(e) => setInsightWajar(e.target.value)}
+                    placeholder="Teks kalau Wajar (Misal: Masih normal)"
+                    className="w-full rounded-lg border border-yellow-300 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-yellow-500"
+                  />
+                  <input
+                    value={insightBoros}
+                    onChange={(e) => setInsightBoros(e.target.value)}
+                    placeholder="Teks kalau Boros (Misal: Jangan boros!)"
+                    className="w-full rounded-lg border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
                 <button type="submit" className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-medium">Simpan</button>
                 <button type="button" onClick={() => { setCatMode(null); setCatName(""); }} className="flex-1 border border-gray-300 dark:border-gray-700 py-2 rounded-lg text-sm">Batal</button>
               </div>
@@ -139,7 +188,7 @@ export default function MasterDataManager({
                 <li key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
                   <span className="text-sm font-medium">{c.name}</span>
                   <div className="flex gap-1">
-                    <button onClick={() => { setCatMode("edit"); setEditCatId(c.id); setCatName(c.name); setCatType("expense"); }} className="text-gray-400 hover:text-blue-500 text-xs p-1">✎</button>
+                    <button onClick={() => openEdit(c)} className="text-gray-400 hover:text-blue-500 text-xs p-1">✎</button>
                     <button onClick={() => handleCatDelete(c.id)} className="text-gray-400 hover:text-red-500 text-xs p-1">✕</button>
                   </div>
                 </li>
@@ -155,7 +204,7 @@ export default function MasterDataManager({
                 <li key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
                   <span className="text-sm font-medium">{c.name}</span>
                   <div className="flex gap-1">
-                    <button onClick={() => { setCatMode("edit"); setEditCatId(c.id); setCatName(c.name); setCatType("income"); }} className="text-gray-400 hover:text-blue-500 text-xs p-1">✎</button>
+                    <button onClick={() => openEdit(c)} className="text-gray-400 hover:text-blue-500 text-xs p-1">✎</button>
                     <button onClick={() => handleCatDelete(c.id)} className="text-gray-400 hover:text-red-500 text-xs p-1">✕</button>
                   </div>
                 </li>
@@ -166,7 +215,7 @@ export default function MasterDataManager({
         </div>
       )}
 
-      {/* KONTEN DOMPET */}
+      {/* KONTEN DOMPET (Sama kayak sebelumnya) */}
       {activeTab === "wallet" && (
         <div className="space-y-4">
           {walletMode ? (

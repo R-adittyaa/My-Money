@@ -3,11 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation"; // <-- WAJIB IMPORT INI
 import { Transaction } from "@/lib/types";
 
-const ChartKlien = dynamic(() => import("./ChartKlien"), { 
+const ChartKlien = dynamic(() => import("./ChartKlien"), {
   ssr: false,
-  loading: () => <div className="h-[280px] w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
+  loading: () => (
+    <div className="h-[280px] w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
+  ),
 });
 
 type Props = {
@@ -18,27 +21,42 @@ type Props = {
   periodLabel: string;
   prevUrl: string;
   nextUrl: string;
-  wallets: { id: string; name: string }[]; // <-- Prop Dompet
+  wallets: { id: string; name: string }[];
 };
 
-export default function StatisticClient({ transactions, availableMonths, activeMonth, activePeriod, periodLabel, prevUrl, nextUrl, wallets }: Props) {
+export default function StatisticClient({
+  transactions,
+  availableMonths,
+  activeMonth,
+  activePeriod,
+  periodLabel,
+  prevUrl,
+  nextUrl,
+  wallets,
+}: Props) {
+  const router = useRouter(); // <-- PANGGIL ROUTER
   const [chartType, setChartType] = useState<"expense" | "income">("expense");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedWallet, setSelectedWallet] = useState<string>("all"); // <-- State Dompet
+  const [selectedWallet, setSelectedWallet] = useState<string>("all");
 
-  // Filter transaksi berdasarkan dompet
-  const safeTransactions = (transactions || []).filter(t => 
-    selectedWallet === "all" ? true : t.wallet === selectedWallet
+  const safeTransactions = (transactions || []).filter((t) =>
+    selectedWallet === "all" ? true : t.wallet === selectedWallet,
   );
 
-  const totalIncome = safeTransactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
-  const totalExpense = safeTransactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = safeTransactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalExpense = safeTransactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
 
   const chartData = Object.entries(
-    safeTransactions.filter((t) => t.type === chartType).reduce<Record<string, number>>((acc, t) => {
+    safeTransactions
+      .filter((t) => t.type === chartType)
+      .reduce<Record<string, number>>((acc, t) => {
         acc[t.category] = (acc[t.category] || 0) + t.amount;
         return acc;
-      }, {})
+      }, {}),
   )
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
@@ -49,7 +67,7 @@ export default function StatisticClient({ transactions, availableMonths, activeM
   };
 
   const historyTransaksi = safeTransactions.filter(
-    (t) => t.category === selectedCategory && t.type === chartType
+    (t) => t.category === selectedCategory && t.type === chartType,
   );
 
   const totalForChart = chartType === "income" ? totalIncome : totalExpense;
@@ -70,40 +88,73 @@ export default function StatisticClient({ transactions, availableMonths, activeM
 
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0 pb-20">
-      
       {/* HEADER: FILTER PERIODE */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="w-1 h-5 bg-red-600 rounded-full"></span>
           <h1 className="text-lg font-bold">Statistik</h1>
         </div>
-        
+
         <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl overflow-x-auto">
           {periods.map((p) => {
             const isActive = activePeriod === p.id;
             return (
-              <Link 
-                key={p.id} 
+              <Link
+                key={p.id}
                 href={buildLink(p.id)}
                 className={`px-4 py-1.5 text-xs font-medium rounded-lg transition whitespace-nowrap ${
-                  isActive ? "bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  isActive
+                    ? "bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white"
+                    : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 }`}
               >
                 {p.label}
               </Link>
-            )
+            );
           })}
         </div>
       </div>
 
       {/* NAVIGASI WAKTU */}
       <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 p-2 rounded-xl border border-gray-200 dark:border-gray-800">
-        <Link href={prevUrl} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        <Link
+          href={prevUrl}
+          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
         </Link>
-        <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{periodLabel}</p>
-        <Link href={nextUrl} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+          {periodLabel}
+        </p>
+        <Link
+          href={nextUrl}
+          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
         </Link>
       </div>
 
@@ -115,7 +166,7 @@ export default function StatisticClient({ transactions, availableMonths, activeM
         >
           Semua Dompet
         </button>
-        {wallets.map(w => (
+        {wallets.map((w) => (
           <button
             key={w.id}
             onClick={() => setSelectedWallet(w.name)}
@@ -128,14 +179,20 @@ export default function StatisticClient({ transactions, availableMonths, activeM
 
       {/* TOGGLE PEMASUKAN vs PENGELUARAN */}
       <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-        <button 
-          onClick={() => { setChartType("income"); setSelectedCategory(null); }} 
+        <button
+          onClick={() => {
+            setChartType("income");
+            setSelectedCategory(null);
+          }}
           className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${chartType === "income" ? "bg-white dark:bg-gray-900 shadow-sm text-green-600" : "text-gray-500"}`}
         >
           ↓ Pemasukan
         </button>
-        <button 
-          onClick={() => { setChartType("expense"); setSelectedCategory(null); }} 
+        <button
+          onClick={() => {
+            setChartType("expense");
+            setSelectedCategory(null);
+          }}
           className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${chartType === "expense" ? "bg-white dark:bg-gray-900 shadow-sm text-red-600" : "text-gray-500"}`}
         >
           ↑ Pengeluaran
@@ -145,8 +202,12 @@ export default function StatisticClient({ transactions, availableMonths, activeM
       {/* KARTU TOTAL */}
       <div className="flex items-center justify-between bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">Total {labelForChart}</p>
-          <p className={`text-xl font-bold tabular-nums ${chartType === "income" ? "text-green-600" : "text-red-600"}`}>
+          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">
+            Total {labelForChart}
+          </p>
+          <p
+            className={`text-xl font-bold tabular-nums ${chartType === "income" ? "text-green-600" : "text-red-600"}`}
+          >
             {formatRupiah(totalForChart)}
           </p>
         </div>
@@ -163,60 +224,73 @@ export default function StatisticClient({ transactions, availableMonths, activeM
       {/* LIST RANKING */}
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Rincian {labelForChart}</h3>
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+            Rincian {labelForChart}
+          </h3>
         </div>
-        
+
         {chartData.map((cat) => {
-          const pct = totalForChart > 0 ? ((cat.value / totalForChart) * 100).toFixed(0) : "0";
+          const pct =
+            totalForChart > 0
+              ? ((cat.value / totalForChart) * 100).toFixed(0)
+              : "0";
           const isSelected = selectedCategory === cat.name;
 
           return (
-            <div key={cat.name} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+            <div
+              key={cat.name}
+              className="border-b border-gray-100 dark:border-gray-800 last:border-0"
+            >
               <button
-                onClick={() => setSelectedCategory(isSelected ? null : cat.name)}
+                onClick={() => {
+                  // REDIRECT KE HALAMAN BARU
+                  router.push(`/statistik/kategori/${encodeURIComponent(cat.name)}`);
+                }}
                 className={`w-full flex items-center justify-between p-4 transition-colors ${
                   isSelected ? "bg-gray-50 dark:bg-gray-800/50" : "hover:bg-gray-50 dark:hover:bg-gray-800/30"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-7 flex items-center justify-center rounded-md text-[10px] font-bold text-white shadow-sm ${chartType === "income" ? "bg-green-600" : "bg-red-600"}`}>
+                  <div
+                    className={`w-10 h-7 flex items-center justify-center rounded-md text-[10px] font-bold text-white shadow-sm ${chartType === "income" ? "bg-green-600" : "bg-red-600"}`}
+                  >
                     {pct}%
                   </div>
-                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{cat.name}</p>
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                    {cat.name}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{formatRupiah(cat.value)}</p>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-gray-400 transition-transform ${isSelected ? "rotate-180" : ""}`}>
-                    <path d="m6 9 6 6 6-6"/>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
+                    {formatRupiah(cat.value)}
+                  </p>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-gray-400"
+                  >
+                    <path d="m9 18 6-6-6-6" /> {/* Ganti ikon jadi panah kanan */}
                   </svg>
                 </div>
               </button>
 
-              {isSelected && (
-                <div className="bg-gray-50/50 dark:bg-gray-900/30 p-4 border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top-2">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Riwayat Transaksi</p>
-                  <ul className="space-y-3">
-                    {historyTransaksi.map((t) => (
-                      <li key={t.id} className="flex justify-between items-center text-sm">
-                        <div>
-                          <p className="font-medium text-gray-800 dark:text-gray-200">{t.notes || t.category}</p>
-                          <p className="text-[10px] text-gray-500">
-                            {new Date(t.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                          </p>
-                        </div>
-                        <p className="font-semibold tabular-nums">{formatRupiah(t.amount)}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* HAPUS BAGIAN RIWAYAT TRANSAKSI (karena udah pindah ke halaman baru) */}
             </div>
           );
         })}
         {chartData.length === 0 && (
-          <div className="p-10 text-center text-sm text-gray-500">Belum ada data {labelForChart.toLowerCase()} di periode ini.</div>
+          <div className="p-10 text-center text-sm text-gray-500">
+            Belum ada data {labelForChart.toLowerCase()} di periode ini.
+          </div>
         )}
       </div>
     </main>
   );
-}
+}   

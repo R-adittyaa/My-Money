@@ -241,9 +241,25 @@ export async function saveCategories(userId: string, items: Category[]) {
   revalidateTag("categories", "max");
 }
 
-export async function updateCategory(userId: string, id: string, name: string, type: "income" | "expense" | "both") {
+// Ganti fungsi updateCategory yang lama jadi ini:
+export async function updateCategory(
+  userId: string, 
+  id: string, 
+  name: string, 
+  type: "income" | "expense" | "both",
+  insight?: { hemat?: string; wajar?: string; boros?: string }
+) {
   const cats = await getCategories(userId);
-  const updated = cats.map((c) => (c.id === id ? { ...c, name, type } : c));
+  const updated = cats.map((c) => 
+    c.id === id ? { 
+      ...c, 
+      name, 
+      type,
+      insightHemat: insight?.hemat || c.insightHemat,
+      insightWajar: insight?.wajar || c.insightWajar,
+      insightBoros: insight?.boros || c.insightBoros,
+    } : c
+  );
   await saveCategories(userId, updated);
 }
 

@@ -57,6 +57,10 @@ export type Category = {
   id: string;
   name: string;
   type: "income" | "expense" | "both";
+  // 3 Baris tambahan buat Insight
+  insightHemat?: string;
+  insightWajar?: string;
+  insightBoros?: string;
 };
 
 export type GoalDeposit = {
@@ -106,5 +110,6 @@ export type Debt = {
   createdAt: string;
   payments: DebtPayment[]; // <-- Tambahan untuk cicilan
 };
+
 
 export type DebtInput = Omit<Debt, "id" | "isPaid" | "createdAt" | "payments">;
