@@ -66,10 +66,6 @@ export default function StatisticClient({
     return sign + "Rp " + Math.abs(n).toLocaleString("id-ID");
   };
 
-  const historyTransaksi = safeTransactions.filter(
-    (t) => t.category === selectedCategory && t.type === chartType,
-  );
-
   const totalForChart = chartType === "income" ? totalIncome : totalExpense;
   const labelForChart = chartType === "income" ? "Pemasukan" : "Pengeluaran";
 
@@ -121,17 +117,7 @@ export default function StatisticClient({
           href={prevUrl}
           className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6" />
           </svg>
         </Link>
@@ -142,17 +128,7 @@ export default function StatisticClient({
           href={nextUrl}
           className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="m9 18 6-6-6-6" />
           </svg>
         </Link>
@@ -243,8 +219,14 @@ export default function StatisticClient({
             >
               <button
                 onClick={() => {
-                  // INI YANG DIBENERIN: Tambahin ?type=${chartType}
-                  router.push(`/statistik/kategori/${encodeURIComponent(cat.name)}?type=${chartType}`);
+                  // KIRIM SEMUA FILTER KE URL
+                  const sp = new URLSearchParams();
+                  sp.set("type", chartType);
+                  sp.set("month", activeMonth);
+                  sp.set("period", activePeriod);
+                  if (selectedWallet !== "all") sp.set("wallet", selectedWallet);
+                  
+                  router.push(`/statistik/kategori/${encodeURIComponent(cat.name)}?${sp.toString()}`);
                 }}
                 className={`w-full flex items-center justify-between p-4 transition-colors ${
                   isSelected ? "bg-gray-50 dark:bg-gray-800/50" : "hover:bg-gray-50 dark:hover:bg-gray-800/30"
@@ -264,18 +246,7 @@ export default function StatisticClient({
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
                     {formatRupiah(cat.value)}
                   </p>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-gray-400"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
                     <path d="m9 18 6-6-6-6" />
                   </svg>
                 </div>
