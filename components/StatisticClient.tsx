@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation"; // <-- WAJIB IMPORT INI
+import { useRouter } from "next/navigation";
 import { Transaction } from "@/lib/types";
 
 const ChartKlien = dynamic(() => import("./ChartKlien"), {
@@ -34,7 +34,7 @@ export default function StatisticClient({
   nextUrl,
   wallets,
 }: Props) {
-  const router = useRouter(); // <-- PANGGIL ROUTER
+  const router = useRouter();
   const [chartType, setChartType] = useState<"expense" | "income">("expense");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedWallet, setSelectedWallet] = useState<string>("all");
@@ -243,8 +243,8 @@ export default function StatisticClient({
             >
               <button
                 onClick={() => {
-                  // REDIRECT KE HALAMAN BARU
-                  router.push(`/statistik/kategori/${encodeURIComponent(cat.name)}`);
+                  // INI YANG DIBENERIN: Tambahin ?type=${chartType}
+                  router.push(`/statistik/kategori/${encodeURIComponent(cat.name)}?type=${chartType}`);
                 }}
                 className={`w-full flex items-center justify-between p-4 transition-colors ${
                   isSelected ? "bg-gray-50 dark:bg-gray-800/50" : "hover:bg-gray-50 dark:hover:bg-gray-800/30"
@@ -276,12 +276,10 @@ export default function StatisticClient({
                     strokeLinejoin="round"
                     className="text-gray-400"
                   >
-                    <path d="m9 18 6-6-6-6" /> {/* Ganti ikon jadi panah kanan */}
+                    <path d="m9 18 6-6-6-6" />
                   </svg>
                 </div>
               </button>
-
-              {/* HAPUS BAGIAN RIWAYAT TRANSAKSI (karena udah pindah ke halaman baru) */}
             </div>
           );
         })}
@@ -293,4 +291,4 @@ export default function StatisticClient({
       </div>
     </main>
   );
-}   
+}

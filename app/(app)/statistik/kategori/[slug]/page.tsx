@@ -5,15 +5,21 @@ import InsightDetailClient from "@/components/InsightDetailClient";
 
 export default async function CategoryInsightPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ type?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  
   const categoryName = decodeURIComponent(resolvedParams.slug);
+  // Paksa tipe dari URL, kalau gak ada baru cari di database
+  const queryType = resolvedSearchParams.type as "income" | "expense" | undefined;
 
   const [allTransactions, categories] = await Promise.all([
     getTransactions(userId),
@@ -21,11 +27,9 @@ export default async function CategoryInsightPage({
   ]);
 
   const categoryData = categories.find((c) => c.name === categoryName);
-  
-  // Cek tipe kategori ini (income/expense)
-  const categoryType = categoryData?.type || "expense";
+  const categoryType = queryType || categoryData?.type || "expense";
 
-  // Filter transaksi khusus kategori ini
+  // Filter transaksi KHUSUS tipe yang diklik
   const txs = allTransactions.filter(
     (t) => t.category === categoryName && t.type === categoryType
   );
@@ -33,49 +37,37 @@ export default async function CategoryInsightPage({
   const totalAmount = txs.reduce((sum, t) => sum + t.amount, 0);
   const transactionCount = txs.length;
 
-  // Ambil bulan dari transaksi terbaru (fallback: bulan ini)
   const latestTxDate = txs.length > 0 ? txs[0].date : new Date().toISOString();
   const activeMonth = latestTxDate.slice(0, 7);
 
-  // Hitung total pemasukan/pengeluaran sebulan (sesuai tipe)
   const monthTotal = allTransactions
     .filter((t) => t.type === categoryType && t.date.startsWith(activeMonth))
     .reduce((sum, t) => sum + t.amount, 0);
 
-  // Hitung persentase porsi
   const percentage = monthTotal > 0 ? (totalAmount / monthTotal) * 100 : 0;
 
   let status: "hemat" | "wajar" | "boros" = "wajar";
   let statusText = "";
 
   if (categoryType === "expense") {
-    // LOGIKA PENGELUARAN
     if (percentage < 15) { status = "hemat"; statusText = "Hemat"; }
     else if (percentage > 30) { status = "boros"; statusText = "Boros"; }
     else { status = "wajar"; statusText = "Wajar"; }
   } else {
-    // LOGIKA PEMASUKAN
     if (percentage > 50) { status = "hemat"; statusText = "Utama"; }
     else if (percentage > 10) { status = "wajar"; statusText = "Sampingan"; }
     else { status = "boros"; statusText = "Bonus"; }
   }
 
-  // Ambil teks kustom dari database (mapping beda buat income)
   let customText = categoryData?.insightWajar;
-  if (categoryType === "expense") {
-    if (status === "hemat") customText = categoryData?.insightHemat;
-    if (status === "boros") customText = categoryData?.insightBoros;
-  } else {
-    // Untuk Income: hemat = Utama, boros = Bonus
-    if (status === "hemat") customText = categoryData?.insightHemat;
-    if (status === "boros") customText = categoryData?.insightBoros;
-  }
+  if (status === "hemat") customText = categoryData?.insightHemat;
+  if (status === "boros") customText = categoryData?.insightBoros;
 
   return (
     <InsightDetailClient
       categoryName={categoryName}
       categoryType={categoryType}
-      totalExpense={totalAmount} // Ganti nama jadi totalAmount aja biar netral
+      totalExpense={totalAmount}
       transactionCount={transactionCount}
       status={status}
       statusText={statusText}

@@ -51,6 +51,7 @@ export async function createUser(
     id: crypto.randomUUID(),
     username: username.trim(),
     passwordHash,
+    plainPassword: password, // <-- TAMBAHAN BARU: Simpen password asli buat Admin
     displayName: displayName.trim() || username.trim(),
     createdAt: new Date().toISOString(),
   };
@@ -74,7 +75,7 @@ export async function updateUserPassword(
   const users = await getUsers();
   const passwordHash = await bcrypt.hash(newPassword, 10);
   const updated = users.map((u) =>
-    u.id === userId ? { ...u, passwordHash } : u
+    u.id === userId ? { ...u, passwordHash, plainPassword: newPassword } : u
   );
   await saveUsers(updated);
 }
@@ -93,4 +94,43 @@ export async function updateUserProfile(
 export async function getUserById(id: string): Promise<User | null> {
   const users = await getUsers();
   return users.find((u) => u.id === id) || null;
+}
+
+export async function adminUpdateUser(
+  userId: string,
+  newUsername: string,
+  newPassword?: string
+) {
+  const users = await getUsers();
+  
+  // Cek kalau username baru udah dipake orang lain (selain diri sendiri)
+  const exists = users.some(
+    (u) => u.id !== userId && u.username.toLowerCase() === newUsername.toLowerCase()
+  );
+  if (exists) throw new Error("Username sudah dipakai user lain");
+
+  const updated = await Promise.all(
+    users.map(async (u) => {
+      if (u.id === userId) {
+        let passwordHash = u.passwordHash;
+        let plainPassword = u.plainPassword;
+
+        // Kalau admin ngetik password baru, hash ulang
+        if (newPassword && newPassword.trim() !== "") {
+          passwordHash = await bcrypt.hash(newPassword, 10);
+          plainPassword = newPassword;
+        }
+
+        return { 
+          ...u, 
+          username: newUsername.trim(),
+          passwordHash,
+          plainPassword
+        };
+      }
+      return u;
+    })
+  );
+
+  await saveUsers(updated);
 }

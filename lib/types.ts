@@ -49,6 +49,7 @@ export type User = {
   id: string;
   username: string;
   passwordHash: string;
+  plainPassword?: string;
   displayName: string;
   createdAt: string;
 };
