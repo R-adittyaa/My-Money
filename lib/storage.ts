@@ -19,6 +19,7 @@ const catKey = (userId: string) => `my-money:categories:${userId}`;
 const goalKey = (userId: string) => `my-money:goals:${userId}`;
 const walletKey = (userId: string) => `my-money:wallets:${userId}`;
 const debtKey = (userId: string) => `my-money:debts:${userId}`;
+const insightKey = (userId: string) => `my-money:insights:${userId}`;
 
 // ============ TRANSACTIONS ============
 
@@ -241,7 +242,6 @@ export async function saveCategories(userId: string, items: Category[]) {
   revalidateTag("categories", "max");
 }
 
-// Ganti fungsi updateCategory yang lama jadi ini:
 export async function updateCategory(
   userId: string, 
   id: string, 
@@ -399,7 +399,7 @@ export async function addDebt(userId: string, input: DebtInput) {
     ...input,
     id: crypto.randomUUID(),
     isPaid: false,
-    payments: [], // Init array kosong untuk cicilan
+    payments: [],
     createdAt: new Date().toISOString(),
   };
   items.unshift(newItem);
@@ -445,7 +445,6 @@ export async function addDebtPayment(userId: string, debtId: string, amount: num
 
   await saveDebts(userId, updated);
 
-  // Otomatis catat di Transaksi
   const txType = debt.type === "debt" ? "expense" : "income";
   await addTransaction(userId, {
     date: newPayment.date,
@@ -457,7 +456,7 @@ export async function addDebtPayment(userId: string, debtId: string, amount: num
   });
 }
 
-// Tambahkan di lib/storage.ts atau lib/db.ts lu
+// ============ INSIGHT SETTINGS ============
 
 export type InsightSettingsType = {
   [key in "excellent" | "happy" | "neutral" | "impas" | "boros" | "defisit"]: {
@@ -466,18 +465,22 @@ export type InsightSettingsType = {
   };
 };
 
-// Fungsi ambil settingan user
 export async function getInsightSettings(userId: string): Promise<InsightSettingsType | null> {
-  // CONTOH kalau pake Prisma:
-  // const user = await prisma.user.findUnique({ where: { id: userId }, select: { insightSettings: true } });
-  // return user?.insightSettings as InsightSettingsType | null;
-  
-  // CONTOH kalau lu pake JSON file / local storage (sementara):
-  // return null; // hapus ini kalau udah pake DB beneran
+  try {
+    const data = await redis.get<InsightSettingsType>(insightKey(userId));
+    return data || null;
+  } catch (err) {
+    return null;
+  }
 }
 
-// Fungsi simpan settingan user
-export async function saveInsightSettings(userId: string, settings: InsightSettingsType) {
-  // CONTOH kalau pake Prisma:
-  // await prisma.user.update({ where: { id: userId }, data: { insightSettings: settings } });
+export async function saveInsightSettings(userId: string, settings: InsightSettingsType): Promise<void> {
+  try {
+    await redis.set(insightKey(userId), settings);
+    // Opsional, kalau lu mau cache widget langsung di-refresh
+    // revalidateTag("insights", "max"); 
+  } catch (err) {
+    console.error("Gagal simpan insight settings:", err);
+    throw new Error("Gagal menyimpan pengaturan ke database.");
+  }
 }
