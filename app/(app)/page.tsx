@@ -4,6 +4,7 @@ import {
   processRecurring,
   getBudgets,
   updateTransaction,
+  getInsightSettings,
 } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -16,6 +17,7 @@ import BalanceDisplay from "@/components/BalanceDisplay";
 import TransactionDetail from "@/components/TransactionDetail";
 import ShareDashboardButton from "@/components/ShareDashboardButton";
 import DailyInsightWidget from "@/components/DailyInsightWidget";
+import { INSIGHT_TEMPLATES, MoodType } from "@/lib/insight-config";
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
@@ -60,9 +62,11 @@ export default async function DashboardPage({
   const params = await searchParams;
   await processRecurring(userId);
 
-  const [all, budgets] = await Promise.all([
+  // Ambil data transaksi, budget, dan settingan teks custom
+  const [all, budgets, customInsight] = await Promise.all([
     getTransactions(userId),
     getBudgets(userId),
+    getInsightSettings(userId),
   ]);
 
   // LOGIKA NAVIGASI BULAN
@@ -117,7 +121,7 @@ export default async function DashboardPage({
   const avgDailyExpense = totalExpense / daysInMonth;
 
   // ============================================
-  // LOGIKA WIDGET HARIAN (DailyInsightWidget) - VERSI PINTAR
+  // LOGIKA WIDGET HARIAN (6 MOOD)
   // ============================================
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayTxs = all.filter((t) => t.date.startsWith(todayStr));
@@ -130,47 +134,34 @@ export default async function DashboardPage({
     .reduce((sum, t) => sum + t.amount, 0);
   const todayNet = todayIncome - todayExpense;
 
-  // Patokan batas wajar (pakai avgDailyExpense, kalau 0 kasih fallback 50rb)
   const dailyLimit = avgDailyExpense > 0 ? avgDailyExpense : 50000;
 
-  let mood: "happy" | "sad" | "neutral" = "neutral";
-  let widgetTitle = "Hari yang Tenang";
-  let widgetMessage = "Belum ada transaksi hari ini. Saldo aman terkendali.";
-  let widgetEmoji = "☕";
+  let mood: MoodType = "neutral";
 
-  if (todayTxs.length > 0) {
-    if (todayIncome > 0 && todayNet > 0) {
-      // 1. HAPPY: Dapet duit, dan sisanya masih surplus
-      mood = "happy";
-      widgetTitle = "Kerja Bagus!";
-      widgetMessage = "Hari ini lu berhasil nyimpen uang. Pertahankan ritmenya!";
-      widgetEmoji = "🎉";
-    } else if (todayIncome > 0 && todayNet < 0) {
-      // 2. SAD (Tipe 1): Ada pemasukan, tapi pengeluaran lebih gede (Gali lubang tutup lubang)
-      mood = "sad";
-      widgetTitle = "Waduh, Defisit!";
-      widgetMessage = "Pengeluaran hari ini melebihi pemasukan. Rem dikit ya!";
-      widgetEmoji = "🔥";
-    } else if (todayIncome === 0 && todayExpense > dailyLimit) {
-      // 3. SAD (Tipe 2): Gak ada pemasukan, tapi belanja melebihi rata-rata harian
-      mood = "sad";
-      widgetTitle = "Waduh, Boros!";
-      widgetMessage = "Pengeluaran lu hari ini di atas rata-rata harian. Besok hemat ya!";
-      widgetEmoji = "🔥";
-    } else if (todayIncome > 0 && todayNet === 0) {
-      // 4. NEUTRAL: Impas
-      mood = "neutral";
-      widgetTitle = "Impas!";
-      widgetMessage = "Pemasukan dan pengeluaran lu hari ini pas-pasan.";
-      widgetEmoji = "⚖️";
+  if (todayTxs.length === 0) {
+    mood = "neutral";
+  } else if (todayIncome > 0) {
+    if (todayNet === 0) {
+      mood = "impas";
+    } else if (todayNet < 0) {
+      mood = "defisit";
+    } else if (todayIncome >= dailyLimit * 5) {
+      mood = "excellent";
     } else {
-      // 5. NEUTRAL/CHILL: Cuma ada pengeluaran wajar (di bawah rata-rata), gak ada pemasukan
+      mood = "happy";
+    }
+  } else {
+    if (todayExpense > dailyLimit) {
+      mood = "boros";
+    } else {
       mood = "neutral";
-      widgetTitle = "Aman Terkendali";
-      widgetMessage = "Pengeluaran hari ini masih wajar. Gak perlu panik.";
-      widgetEmoji = "🛡️";
     }
   }
+
+  // Ambil teks custom dari DB, kalau gak ada pakai default
+  const finalTemplates = customInsight || INSIGHT_TEMPLATES;
+  const template = finalTemplates[mood];
+
   // ============================================
 
   async function handleDelete(formData: FormData) {
@@ -210,7 +201,6 @@ export default async function DashboardPage({
     year: "numeric",
   });
 
-  // Logika tombol panah Kiri & Kanan
   const prevMonth = new Date(activeMonth + "-01");
   prevMonth.setMonth(prevMonth.getMonth() - 1);
   const prevMonthStr = prevMonth.toISOString().slice(0, 7);
@@ -226,9 +216,8 @@ export default async function DashboardPage({
       {/* WIDGET HARIAN */}
       <DailyInsightWidget
         mood={mood}
-        title={widgetTitle}
-        message={widgetMessage}
-        emoji={widgetEmoji}
+        title={template.title}
+        message={template.message}
         todayNet={todayNet}
       />
 
@@ -244,23 +233,12 @@ export default async function DashboardPage({
         />
 
         <div className="relative">
-          {/* NAVIGASI BULAN DI SINI */}
           <div className="flex items-center gap-3 mb-1">
             <Link
               href={`/?month=${prevMonthStr}`}
               className="p-1 rounded-full hover:bg-white/20 transition text-white/70 hover:text-white"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m15 18-6-6 6-6" />
               </svg>
             </Link>
@@ -273,17 +251,7 @@ export default async function DashboardPage({
               href={`/?month=${nextMonthStr}`}
               className="p-1 rounded-full hover:bg-white/20 transition text-white/70 hover:text-white"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m9 18 6-6-6-6" />
               </svg>
             </Link>
@@ -341,10 +309,7 @@ export default async function DashboardPage({
               <span className="w-1 h-4 bg-red-600 rounded-full"></span>
               <h2 className="font-semibold text-sm">Pengeluaran</h2>
             </div>
-            <Link
-              href="/statistik"
-              className="text-xs text-red-600 dark:text-red-400 hover:underline"
-            >
+            <Link href="/statistik" className="text-xs text-red-600 dark:text-red-400 hover:underline">
               Lihat detail →
             </Link>
           </div>
@@ -358,10 +323,7 @@ export default async function DashboardPage({
             <span className="w-1 h-4 bg-red-600 rounded-full"></span>
             <h2 className="font-semibold text-sm">Transaksi Terbaru</h2>
           </div>
-          <Link
-            href="/transaksi"
-            className="text-xs text-red-600 dark:text-red-400 hover:underline"
-          >
+          <Link href="/transaksi" className="text-xs text-red-600 dark:text-red-400 hover:underline">
             Lihat semua →
           </Link>
         </div>
@@ -369,13 +331,8 @@ export default async function DashboardPage({
         {recentTransactions.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 py-12 text-center">
             <p className="text-4xl mb-2">📝</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Belum ada transaksi
-            </p>
-            <Link
-              href="/transaksi"
-              className="inline-block mt-3 text-xs bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition"
-            >
+            <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada transaksi</p>
+            <Link href="/transaksi" className="inline-block mt-3 text-xs bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition">
               + Tambah Transaksi
             </Link>
           </div>

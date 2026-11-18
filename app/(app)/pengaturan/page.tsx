@@ -1,4 +1,4 @@
-import { getTransactions } from "@/lib/storage";
+import { getTransactions, getInsightSettings } from "@/lib/storage";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -7,13 +7,17 @@ import LogoutButton from "@/components/LogoutButton";
 import AccountSettings from "@/components/AccountSettings";
 import { transactionsToCSV, generateFilename } from "@/lib/csv";
 import ThemeToggle from "@/components/ThemeToggle";
+import InsightSettingsForm from "@/components/InsightSettingsForm";
 
 export default async function PengaturanPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
-  const all = await getTransactions(userId);
+  const [all, customInsight] = await Promise.all([
+    getTransactions(userId),
+    getInsightSettings(userId),
+  ]);
 
   const availableMonths = Array.from(
     new Set(all.map((t) => t.date.slice(0, 7)))
@@ -39,7 +43,9 @@ export default async function PengaturanPage() {
   }
 
   return (
-    <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-6 max-w-4xl mx-auto lg:mx-0 pb-24">
+    <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-8 max-w-2xl mx-auto lg:mx-0 pb-24">
+      
+      {/* HEADER */}
       <div className="flex items-center gap-2">
         <span className="w-1 h-5 bg-red-600 rounded-full"></span>
         <h1 className="text-xl font-bold">Pengaturan</h1>
@@ -47,8 +53,9 @@ export default async function PengaturanPage() {
 
       {/* SECTION: AKUN */}
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">Akun</h2>
-        
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">
+          Akun
+        </h2>
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
           <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-lg shadow-sm">
@@ -68,9 +75,11 @@ export default async function PengaturanPage() {
         </div>
       </section>
 
-            {/* SECTION: PREFERENSI */}
+      {/* SECTION: PREFERENSI & KUSTOMISASI */}
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">Preferensi</h2>
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">
+          Preferensi & Kustomisasi
+        </h2>
         
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm divide-y divide-gray-100 dark:divide-gray-800">
           
@@ -91,20 +100,42 @@ export default async function PengaturanPage() {
             </div>
             <span className="text-gray-400">→</span>
           </Link>
+
+          {/* MASTER DATA */}
+          <Link href="/pengaturan/master" className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+            <div>
+              <p className="font-medium text-sm">Master Data</p>
+              <p className="text-xs text-gray-500">Atur kategori dan dompet</p>
+            </div>
+            <span className="text-gray-400">→</span>
+          </Link>
+
+          {/* KUSTOMISASI WIDGET (ACCORDION) */}
+          <details className="group [&_summary::-webkit-details-marker]:hidden">
+            <summary className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+              <div>
+                <p className="font-medium text-sm">Teks Widget Harian</p>
+                <p className="text-xs text-gray-500">Ubah pesan sapaan di Dashboard</p>
+              </div>
+              <span className="text-gray-400 transition-transform duration-200 group-open:rotate-90">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </span>
+            </summary>
+            <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20">
+              <InsightSettingsForm initialSettings={customInsight} />
+            </div>
+          </details>
+
         </div>
       </section>
 
-      <Link href="/pengaturan/master" className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition border-t border-gray-100 dark:border-gray-800">
-  <div>
-    <p className="font-medium text-sm">Master Data</p>
-    <p className="text-xs text-gray-500">Atur kategori dan dompet</p>
-  </div>
-  <span className="text-gray-400">→</span>
-</Link>
-
-      {/* SECTION: DATA & EXPORT */}
+      {/* SECTION: DATA & BACKUP */}
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">Data & Backup</h2>
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">
+          Data & Backup
+        </h2>
         
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm space-y-4">
           <div className="flex justify-between items-center">
@@ -129,7 +160,9 @@ export default async function PengaturanPage() {
 
       {/* SECTION: LAINNYA */}
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">Lainnya</h2>
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest pl-1">
+          Lainnya
+        </h2>
         
         <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm divide-y divide-gray-100 dark:divide-gray-800">
           <div className="p-4 flex items-center justify-between">
@@ -137,17 +170,19 @@ export default async function PengaturanPage() {
             <p className="text-xs text-gray-500 font-mono">v2.0.0 (PWA)</p>
           </div>
           <div className="p-4 flex items-center justify-between">
-            <p className="font-medium text-sm">Logout</p>
+            <p className="font-medium text-sm text-red-600 dark:text-red-500">Logout</p>
             <LogoutButton />
           </div>
         </div>
       </section>
 
+      {/* FOOTER */}
       <div className="text-center pt-6 pb-2">
         <p className="text-[10px] text-gray-400 dark:text-gray-500">
           My Money · Dibuat dengan ❤️
         </p>
       </div>
+      
     </main>
   );
 }

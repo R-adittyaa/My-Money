@@ -456,3 +456,28 @@ export async function addDebtPayment(userId: string, debtId: string, amount: num
     notes: `Cicilan ${debt.type === "debt" ? "hutang ke" : "piutang dari"} ${debt.personName}`,
   });
 }
+
+// Tambahkan di lib/storage.ts atau lib/db.ts lu
+
+export type InsightSettingsType = {
+  [key in "excellent" | "happy" | "neutral" | "impas" | "boros" | "defisit"]: {
+    title: string;
+    message: string;
+  };
+};
+
+// Fungsi ambil settingan user
+export async function getInsightSettings(userId: string): Promise<InsightSettingsType | null> {
+  // CONTOH kalau pake Prisma:
+  // const user = await prisma.user.findUnique({ where: { id: userId }, select: { insightSettings: true } });
+  // return user?.insightSettings as InsightSettingsType | null;
+  
+  // CONTOH kalau lu pake JSON file / local storage (sementara):
+  // return null; // hapus ini kalau udah pake DB beneran
+}
+
+// Fungsi simpan settingan user
+export async function saveInsightSettings(userId: string, settings: InsightSettingsType) {
+  // CONTOH kalau pake Prisma:
+  // await prisma.user.update({ where: { id: userId }, data: { insightSettings: settings } });
+}
