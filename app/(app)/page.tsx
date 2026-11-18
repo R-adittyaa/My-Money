@@ -117,7 +117,7 @@ export default async function DashboardPage({
   const avgDailyExpense = totalExpense / daysInMonth;
 
   // ============================================
-  // LOGIKA WIDGET HARIAN (DailyInsightWidget)
+  // LOGIKA WIDGET HARIAN (DailyInsightWidget) - VERSI PINTAR
   // ============================================
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayTxs = all.filter((t) => t.date.startsWith(todayStr));
@@ -130,29 +130,45 @@ export default async function DashboardPage({
     .reduce((sum, t) => sum + t.amount, 0);
   const todayNet = todayIncome - todayExpense;
 
+  // Patokan batas wajar (pakai avgDailyExpense, kalau 0 kasih fallback 50rb)
+  const dailyLimit = avgDailyExpense > 0 ? avgDailyExpense : 50000;
+
   let mood: "happy" | "sad" | "neutral" = "neutral";
   let widgetTitle = "Hari yang Tenang";
   let widgetMessage = "Belum ada transaksi hari ini. Saldo aman terkendali.";
   let widgetEmoji = "☕";
 
   if (todayTxs.length > 0) {
-    if (todayNet > 0) {
+    if (todayIncome > 0 && todayNet > 0) {
+      // 1. HAPPY: Dapet duit, dan sisanya masih surplus
       mood = "happy";
       widgetTitle = "Kerja Bagus!";
-      widgetMessage =
-        "Hari ini lu berhasil nyimpen uang. Pertahankan ritmenya!";
+      widgetMessage = "Hari ini lu berhasil nyimpen uang. Pertahankan ritmenya!";
       widgetEmoji = "🎉";
-    } else if (todayNet < 0) {
+    } else if (todayIncome > 0 && todayNet < 0) {
+      // 2. SAD (Tipe 1): Ada pemasukan, tapi pengeluaran lebih gede (Gali lubang tutup lubang)
+      mood = "sad";
+      widgetTitle = "Waduh, Defisit!";
+      widgetMessage = "Pengeluaran hari ini melebihi pemasukan. Rem dikit ya!";
+      widgetEmoji = "🔥";
+    } else if (todayIncome === 0 && todayExpense > dailyLimit) {
+      // 3. SAD (Tipe 2): Gak ada pemasukan, tapi belanja melebihi rata-rata harian
       mood = "sad";
       widgetTitle = "Waduh, Boros!";
-      widgetMessage =
-        "Pengeluaran hari ini lebih besar dari pemasukan. Besok hemat ya!";
+      widgetMessage = "Pengeluaran lu hari ini di atas rata-rata harian. Besok hemat ya!";
       widgetEmoji = "🔥";
-    } else {
+    } else if (todayIncome > 0 && todayNet === 0) {
+      // 4. NEUTRAL: Impas
       mood = "neutral";
       widgetTitle = "Impas!";
-      widgetMessage = "Pemasukan dan pengeluaran lu hari ini seimbang.";
+      widgetMessage = "Pemasukan dan pengeluaran lu hari ini pas-pasan.";
       widgetEmoji = "⚖️";
+    } else {
+      // 5. NEUTRAL/CHILL: Cuma ada pengeluaran wajar (di bawah rata-rata), gak ada pemasukan
+      mood = "neutral";
+      widgetTitle = "Aman Terkendali";
+      widgetMessage = "Pengeluaran hari ini masih wajar. Gak perlu panik.";
+      widgetEmoji = "🛡️";
     }
   }
   // ============================================
