@@ -15,6 +15,7 @@ import BudgetAlert from "@/components/BudgetAlert";
 import BalanceDisplay from "@/components/BalanceDisplay";
 import TransactionDetail from "@/components/TransactionDetail";
 import ShareDashboardButton from "@/components/ShareDashboardButton";
+import DailyInsightWidget from "@/components/DailyInsightWidget";
 
 function categoryIcon(category: string): string {
   const c = category.toLowerCase();
@@ -115,6 +116,47 @@ export default async function DashboardPage({
   ).getDate();
   const avgDailyExpense = totalExpense / daysInMonth;
 
+  // ============================================
+  // LOGIKA WIDGET HARIAN (DailyInsightWidget)
+  // ============================================
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayTxs = all.filter((t) => t.date.startsWith(todayStr));
+
+  const todayIncome = todayTxs
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const todayExpense = todayTxs
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const todayNet = todayIncome - todayExpense;
+
+  let mood: "happy" | "sad" | "neutral" = "neutral";
+  let widgetTitle = "Hari yang Tenang";
+  let widgetMessage = "Belum ada transaksi hari ini. Saldo aman terkendali.";
+  let widgetEmoji = "☕";
+
+  if (todayTxs.length > 0) {
+    if (todayNet > 0) {
+      mood = "happy";
+      widgetTitle = "Kerja Bagus!";
+      widgetMessage =
+        "Hari ini lu berhasil nyimpen uang. Pertahankan ritmenya!";
+      widgetEmoji = "🎉";
+    } else if (todayNet < 0) {
+      mood = "sad";
+      widgetTitle = "Waduh, Boros!";
+      widgetMessage =
+        "Pengeluaran hari ini lebih besar dari pemasukan. Besok hemat ya!";
+      widgetEmoji = "🔥";
+    } else {
+      mood = "neutral";
+      widgetTitle = "Impas!";
+      widgetMessage = "Pemasukan dan pengeluaran lu hari ini seimbang.";
+      widgetEmoji = "⚖️";
+    }
+  }
+  // ============================================
+
   async function handleDelete(formData: FormData) {
     "use server";
     const session = await auth();
@@ -164,6 +206,15 @@ export default async function DashboardPage({
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 max-w-4xl mx-auto lg:mx-0 pb-24">
       {budgetStatuses.length > 0 && <BudgetAlert items={budgetStatuses} />}
+
+      {/* WIDGET HARIAN */}
+      <DailyInsightWidget
+        mood={mood}
+        title={widgetTitle}
+        message={widgetMessage}
+        emoji={widgetEmoji}
+        todayNet={todayNet}
+      />
 
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-5 sm:p-6 text-white shadow-lg">
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
